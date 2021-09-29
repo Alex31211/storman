@@ -55,11 +55,11 @@ int is_handled(void* ptr, Pointer* head){
 	Pointer* curr = head;
 	while(curr != NULL){
 		if(curr->address == ptr){
+
 			return 1;
 		}
 		curr = curr->next;
 	}
-
 	return 0;
 }
 
@@ -127,7 +127,7 @@ void insert_new_pointer(void** ptr, Pointer** head){
 		return;
 	}
 
-	new_ptr->address = *ptr;
+	new_ptr->address = ptr;
 
 	if(prev == NULL){
         new_ptr->next = *head;
@@ -241,4 +241,28 @@ void release_block(void* ptr, Zone** head){
 	}
 
 	return;
+}
+
+int is_in_block(void* ptr, Zone* head){
+	int i;
+	void** s;
+	void** e;
+
+	Zone* curr = head;
+	while(curr != NULL){
+		s = curr->starting_addr;
+		e = curr->ending_addr;
+		for(i=0; i<MAX_BLOCKS; i++){
+			if(s[i] == NULL){
+				break;
+			}
+
+			if(s[i]<=ptr && ptr<=e[i]){
+				return 1;
+			}
+		}
+		curr = curr->next;
+	}
+
+	return 0;
 }

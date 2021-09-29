@@ -46,7 +46,7 @@ int block_alloc(void** ptr_addr, size_t alignment, size_t size){
 	/*Se l’indirizzo in ptr_addr è di un puntatore già gestito allora applica block_release(ptr_addr) 
 	senza rilasciare il puntatore all’indirizzo in ptr_addr.*/
 	
-	if(is_handled(*ptr_addr, handled_ptrs)){
+	if(is_handled(ptr_addr, handled_ptrs)){
 		int count = has_multiple_ptr(*ptr_addr, handled_ptrs, available_zones);
 
 		*ptr_addr = NULL;
@@ -79,7 +79,7 @@ int block_release (void** ptr_addr){
 
 	//STEP 1
 	//Se l’indirizzo in ptr_addr non è quello di un puntatore già gestito da storman allora return 2
-	if(!is_handled(*ptr_addr, handled_ptrs)){
+	if(!is_handled(ptr_addr, handled_ptrs)){
 		return 2;
 	}
 
@@ -123,7 +123,7 @@ Rilascia il puntatore in ptr_addr.
 int pointer_release(void** ptr_addr){
 	//STEP 1
 	//Se l’indirizzo in ptr_addr non è quello di un puntatore già gestito da storman allora return 1
-	if(!is_handled(*ptr_addr, handled_ptrs)){
+	if(!is_handled(ptr_addr, handled_ptrs)){
 		return 1;
 	}
 
@@ -157,12 +157,12 @@ int pointer_assign(void** ptr_addr, void* val){
 	
 	//STEP 1
 	//Se val non è un indirizzo di un blocco gestito da storman return 1.
-	if(!is_handled(val, handled_ptrs)){
+	if(!is_in_block(val, available_zones)){
 		return 1;
 	}
 
 	//Se ptr_addr è di un puntatore gestito
-	if(is_handled(*ptr_addr, handled_ptrs)){
+	if(is_handled(ptr_addr, handled_ptrs)){
 		//STEP 2
 		//Se val == *ptr_addr allora return 0
 		if(val == *ptr_addr){

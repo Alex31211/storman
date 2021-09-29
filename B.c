@@ -14,7 +14,7 @@ Trova tutti i puntatori gestiti da storman che puntano allo stesso blocco di *pt
 void*** block_info (void** ptr_addr, void** lowaddr, void** highaddr, size_t* num_ptr){
 	//STEP 1
 	//Se ptr_addr non è l’indirizzo di un puntatore di storman return NULL.
-	if(!is_handled(*ptr_addr, handled_ptrs)){
+	if(!is_handled(ptr_addr, handled_ptrs)){
 		return NULL;
 	}
 
@@ -64,11 +64,12 @@ void*** block_info (void** ptr_addr, void** lowaddr, void** highaddr, size_t* nu
 	1: ptr_addr non è l’indirizzo di un puntatore gestito da storman
 */
 int pointer_info(void** ptr_addr, unsigned int* type){
-	if(!is_handled(*ptr_addr, handled_ptrs)){
+	if(!is_handled(ptr_addr, handled_ptrs)){
 		return 1;
 	}
 
 	//get type and set pointer -> return 0
+	return 0;
 }
 
 

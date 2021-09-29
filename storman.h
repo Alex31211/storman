@@ -9,18 +9,25 @@ int pointer_assign(void** ptr_addr, void* val);
 //Modulo B
 void*** block_info(void** ptr_addr, void** lowaddr, void** highaddr, size_t* num_ptr);
 int pointer_info(void** ptr_addr, unsigned int* type);
-/*#define assign (__lv, __rv, __ret)
-		(//Se l’indirizzo di __lv è l’indirizzo di uno dei puntatori gestiti da
-		//storman allora assegna 2 a __ret e non fa altro.
-			if(is_handled(__lv, d_ptr, &block_ptr)){
-				__ret = 2;
-			}else{
-				//Se l’indirizzo di __lv non è contenuto in uno dei blocchi gestiti da
-				//storman allora assegna 1 a __ret e non fa altro.
-
-				//Altrimenti, assegna 0 a __ret e assegna __rv a __lv.
-			}
-		)*/
+#define assign(__lv, __rv, __ret) \
+				/*STEP 1 
+				Se l’indirizzo di __lv è di uno dei puntatori gestiti da storman allora assegna 2 a __ret.*/ \
+				if(is_handled(&__lv, handled_ptrs)){ \
+					__ret = 2; \
+				}else{ \
+					/*STEP 2 
+					Se l’indirizzo di __lv non è contenuto in uno dei blocchi gestiti da storman allora assegna 1 a __ret.*/ \
+					if(!is_in_block(&__lv, available_zones)){ \
+						__ret = 1; \
+					}else{ \
+						/*STEP 3
+						Assegna 0 a __ret e assegna __rv a __lv.*/ \
+						__ret = 0; \
+						__lv = __rv; \
+					} \
+				}
+				
+		
 //int block_realloc(void** ptr_addr, size_t newsize);
 
 //Modulo E

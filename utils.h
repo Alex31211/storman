@@ -37,3 +37,5 @@ void release_block(void*, Zone**);
 void insert_new_pointer(void**, Pointer**);
 
 int insert_new_block(Zone*, void*, void*);
+
+int is_in_block(void*, Zone*);

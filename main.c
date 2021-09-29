@@ -6,7 +6,7 @@ Zone* available_zones = NULL;
 
 int main(){
 
-	//**********A****************
+	//**********A**************** OK
 	/*static int* ptr;
 	static int* ptr2;
 	block_alloc((void**)&ptr, 2*sizeof(void*), 200*sizeof(int));
@@ -17,7 +17,7 @@ int main(){
 	pointer_assign((void**)&ptr2, (void*)ptr);*/
 
 	//************B**************
-	//*********block_info*************
+	//*********block_info************* OK
 	/*static int* ptr;
 	static int* ptr2;
 	size_t num;
@@ -32,36 +32,31 @@ int main(){
 	free(pointer_array);*/
 
 	//**********pointer_info**********
-	static char** ptr;
+	/*static char** ptr;
 	int* ptr2;
 	int type1, type2, type3;
 	block_alloc((void**)(ptr), 2*sizeof(void*), 5*sizeof(char*)); //alloca un array di 5 char* e lo assegna a ptr
 	block_alloc((void**)(&ptr2), 2*sizeof(void*), 20*sizeof(int)); //alloca un array di 20 int e lo assegna a ptr2
 	block_alloc((void**)(&ptr[3]), 2*sizeof(void*), 30*sizeof(char)); //alloca un array di 30 char e lo assegna a ptr[3]
 	
-	Zone* curr = available_zones;
-	while(curr != NULL){
-		printf("%lu\n", curr->available);
-		curr = curr->next;
-	}
 	
-	
-	/*pointer_info(&ptr, &type1); //setta type1 a 0 
+	pointer_info(&ptr, &type1); //setta type1 a 0 
 	pointer_info(&ptr2, &type2); //setta type2 a 0
 	pointer_info(&ptr[3], &type3); //setta type3 a 1
 
 	printf("%d - %d - %d\n", type1, type2, type3);*/
 
 	//**********assign**********
-	/*
-	static char* ptr;
+	
+	/*static char* ptr;
 	int i;
 	int retval1, retval2, retval3;
-	block_alloc(&ptr, 2*sizeof(void*), 5*sizeof(char));
+	block_alloc((void**)&ptr, 2*sizeof(void*), 5*sizeof(char));
 	assign(ptr[1], 'c', retval1); //retval1 è settato a 0 e ’c’ viene assegnato a ptr[1]
 	assign(i, 2, retval2); //retval2 è settato a 1
 	assign(ptr, NULL, retval3); //retval3 è settato a 2
-	*/
+	
+	printf("%d - %d - %d\n", retval1, retval2, retval3);*/
 
 	//************block_realloc*************
 	/*
