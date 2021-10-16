@@ -22,46 +22,47 @@ int block_alloc(void** ptr_addr, size_t alignment, size_t size){
 	//STEP 1
 	//Controlla spazio per l'allocazione del blocco
 	Zone* zone;
-	retrieve_available_space(&available_zones, size, &zone);
+	int type = retrieve_allocation_zone(&available_zones, size, &zone);
 
 	size_t busy_space = zone->total - zone->available;
-	void* start = (void*)zone + busy_space;
+	if(busy_space != 0){
+		busy_space += 1;
+	}
 
+	void* start = (void*)zone + busy_space;	
 	int slack = 0;
-	while(!((size_t)start & (alignment-1))){
+	while(!((size_t)start & (alignment))){
 		start += 1;
 		slack++;
 	}
 
 	//Alloca il nuovo blocco ad un indirizzo che sia multiplo di alignment	
 	void* end = start + size;
-	if(!insert_new_block(zone, start, end)){
+
+	if(!insert_new_block(&zone, start, end)){
 		return 1;
 	}
-
 	//Aggiorna i parametri di zone
 	zone->available -= size + slack;
-
+	
 	//STEP 2
 	/*Se l’indirizzo in ptr_addr è di un puntatore già gestito allora applica block_release(ptr_addr) 
-	senza rilasciare il puntatore all’indirizzo in ptr_addr.*/
-	
-	if(is_handled(ptr_addr, handled_ptrs)){
+	senza rilasciare il puntatore all’indirizzo in ptr_addr.*/	
+	if(is_handled(*ptr_addr, handled_ptrs)){
 		int count = has_multiple_ptr(*ptr_addr, handled_ptrs, available_zones);
-
-		*ptr_addr = NULL;
 		if(count > 1){
 			return 1;
+		}else if (count == 1){
+			//release_block(*ptr_addr, &available_zones);
+			return 0;
 		}
-		return 0;
 	}
 
-	//STEP 3
+	//STEP 3 - 4
 	//Se l’indirizzo in ptr_addr non è quello di un puntatore già gestito allora lo acquisisce
-	//STEP 4
 	//Assegna l’indirizzo di partenza del nuovo blocco a *ptr_addr e return 0
 	*ptr_addr = start;
-	insert_new_pointer(ptr_addr, &handled_ptrs);
+	insert_new_pointer(*ptr_addr, &handled_ptrs, type);
 
 	return 0;	
 }
@@ -79,7 +80,7 @@ int block_release (void** ptr_addr){
 
 	//STEP 1
 	//Se l’indirizzo in ptr_addr non è quello di un puntatore già gestito da storman allora return 2
-	if(!is_handled(ptr_addr, handled_ptrs)){
+	if(!is_handled(*ptr_addr, handled_ptrs)){
 		return 2;
 	}
 
@@ -100,7 +101,7 @@ int block_release (void** ptr_addr){
 			Assegna NULL a *ptr_addr e return 0.*/
 		void* start;
 		void* end;
-		if(retrieve_block(*ptr_addr, available_zones, &start, &end)){
+		if(retrieve_block(*ptr_addr, available_zones, &start, &end) != -1){
 			release_block(*ptr_addr, &available_zones);
 			release_ptr(*ptr_addr, &handled_ptrs);
 			*ptr_addr = NULL;
@@ -123,7 +124,7 @@ Rilascia il puntatore in ptr_addr.
 int pointer_release(void** ptr_addr){
 	//STEP 1
 	//Se l’indirizzo in ptr_addr non è quello di un puntatore già gestito da storman allora return 1
-	if(!is_handled(ptr_addr, handled_ptrs)){
+	if(!is_handled(*ptr_addr, handled_ptrs)){
 		return 1;
 	}
 
@@ -154,18 +155,20 @@ Acquisisce un puntatore.
 	1: val non è un indirizzo di un blocco gestito da storman
 */
 int pointer_assign(void** ptr_addr, void* val){
-	
+
 	//STEP 1
 	//Se val non è un indirizzo di un blocco gestito da storman return 1.
-	if(!is_in_block(val, available_zones)){
+	void* s_temp;
+	void* e_temp;
+	if(retrieve_block(val, available_zones, &s_temp, &e_temp) == -1){
 		return 1;
 	}
 
 	//Se ptr_addr è di un puntatore gestito
-	if(is_handled(ptr_addr, handled_ptrs)){
+	if(is_handled(*ptr_addr, handled_ptrs)){
 		//STEP 2
 		//Se val == *ptr_addr allora return 0
-		if(val == *ptr_addr){
+		if(val == *ptr_addr){			
 			return 0;
 		}else{
 			//STEP 3
@@ -173,27 +176,30 @@ int pointer_assign(void** ptr_addr, void* val){
 				senza rilasciare il puntatore all’indirizzo in ptr_addr*/
 			void* start;
 			void* end;
-			if(retrieve_block(*ptr_addr, available_zones, &start, &end)){
+			if(retrieve_block(*ptr_addr, available_zones, &start, &end) != -1){
 				if(!(start<=val && val<=end)){
 					int count = has_multiple_ptr(*ptr_addr, handled_ptrs, available_zones);
-					*ptr_addr = NULL;
 					if(count > 1){
 						return 1;
+					}else if (count == 1){
+						release_block(*ptr_addr, &available_zones);
 					}
 				}
 			}
-			/*NOT HANDLED: val è interno al blocco puntato da *ptr_addr ma val!=*ptr_addr*/	
 		}	
 
 	}else{
-		//STEP 4
+		//STEP 4,5
 		//Se l’indirizzo in ptr_addr non è quello di un puntatore già gestito allora lo acquisisce
-
-		//STEP 5
 		//Assegna l’indirizzo in val a *ptr_addr e return 0
-
+		int type;
+		if(*ptr_addr == NULL){
+			type = 0;
+		}else{
+			type = 1;
+		}
 		*ptr_addr = val;
-		insert_new_pointer(ptr_addr, &handled_ptrs);		
+		insert_new_pointer(*ptr_addr, &handled_ptrs, type);		
 	}
 
 	return 0;

@@ -14,13 +14,13 @@ Trova tutti i puntatori gestiti da storman che puntano allo stesso blocco di *pt
 void*** block_info (void** ptr_addr, void** lowaddr, void** highaddr, size_t* num_ptr){
 	//STEP 1
 	//Se ptr_addr non è l’indirizzo di un puntatore di storman return NULL.
-	if(!is_handled(ptr_addr, handled_ptrs)){
+	if(!is_handled(*ptr_addr, handled_ptrs)){
 		return NULL;
 	}
 
 	//STEP 2
 	//Setta *lowaddr e *highaddr con gli indirizzi di partenza e fine del blocco puntato da *ptr_addr.
-	if(!retrieve_block(*ptr_addr, available_zones, lowaddr, highaddr)){
+	if(retrieve_block(*ptr_addr, available_zones, lowaddr, highaddr) == -1){
 		return NULL;
 	}
 
@@ -63,12 +63,13 @@ void*** block_info (void** ptr_addr, void** lowaddr, void** highaddr, size_t* nu
 	0: esecuzione corretta
 	1: ptr_addr non è l’indirizzo di un puntatore gestito da storman
 */
-int pointer_info(void** ptr_addr, unsigned int* type){
-	if(!is_handled(ptr_addr, handled_ptrs)){
+int pointer_info(void** ptr_addr, int* type){
+	if(!is_handled(*ptr_addr, handled_ptrs)){
 		return 1;
 	}
 
-	//get type and set pointer -> return 0
+	*type = retrieve_ptr_type(*ptr_addr, handled_ptrs);
+
 	return 0;
 }
 
@@ -82,31 +83,86 @@ int pointer_info(void** ptr_addr, unsigned int* type){
 	1: ptr_addr non è l’indirizzo di un puntatore gestito da storman
 	2: errore, newsize è troppo piccola
 */
-/*int block_realloc(void** ptr_addr, size_t newsize){
-	Block* block_ptr = NULL;
-	if(!is_handled(*ptr_addr, d_ptr, &block_ptr)){
+
+int block_realloc(void** ptr_addr, size_t newsize){
+	//STEP 0
+	if(!is_handled(*ptr_addr, handled_ptrs)){
 		return 1;
 	}
 
-	//Caso 1
-	if(block_ptr->block_dim == newsize){
-		return 0;
-	}
+	//STEP 1
+	//Sia B il blocco puntato dal puntatore all’indirizzo in ptr_addr	
+	void* start;
+	void* end;
+	retrieve_block(*ptr_addr, available_zones, &start, &end);
+	size_t size = (size_t)(end - start);
 
-	//Caso 2
-	if(block_ptr->block_dim < newsize){
+	if(size < newsize){ 
+		//Caso 2: |B| < newsize
 		//Se nella zona Z che contiene B c’è spazio a sufficienza sulla destra di B, allora espande B sulla destra e return 0.
-		//Se in Z non c’è spazio per espandere B:
-			//1. Alloca un nuovo blocco B 0 con lo stesso procedimento di block_alloc(ptr_addr, align, newsize) (dove align è lo stesso allineamento di B) ma senza deallocare B.
-			//2. Copia il contenuto di B in B 0.
-			//3. Aggiorna tutti i puntatori gestiti da storman che puntano a B in modo che puntino a B 0 , mantenendo gli stessi offset.
-			//4. Dealloca B e return 0.
+		size_t needed_dim = newsize-size;
+		if(is_avb_space(*ptr_addr, available_zones, needed_dim)){
+			expand_block(end, &available_zones, needed_dim);
+		}else{			
+			//Alloca un nuovo blocco B' con block_alloc(ptr_addr, align, newsize), stesso align di B, senza deallocare B.
+				//NOTE: block_alloc controlla il vincolo di avere alignement divisibile per 8 byte e che sia una potenza di 2!
+			size_t alignment; 
+			size_t align_temp = sizeof(void*);
+			while(((size_t)start % align_temp) == 0){
+				alignment = align_temp;
+				align_temp *= 2;
+			}
+			block_alloc(ptr_addr, alignment, newsize);
+
+			//Copia il contenuto di B in B'.
+			void* newstart;
+			void* newend;
+			int i;
+			retrieve_block(*ptr_addr, available_zones, &newstart, &newend);
+			copy_block_content(newstart, start, size);
+						
+			//Aggiorna tutti i puntatori gestiti da storman che puntano a B in modo che puntino a B', mantenendo gli stessi offset.
+			size_t num;
+			void*** pointer_array = block_info(ptr_addr, &start, &end, &num);
+			if(num != 0){
+				void** temp1 = pointer_array[0];
+				void** temp2;
+
+				size_t offsets[num];
+				offsets[0] = (size_t)(*temp1 - start);
+
+				for(i=1; i<(int)num; i++){
+					temp2 = pointer_array[i];
+					offsets[i] = (size_t)(*temp2 - *temp1);
+					temp1 = temp2;
+				}
+
+				void* temp = newstart;
+				for(i=0; i<(int)num; i++){
+					insert_new_pointer(temp + offsets[i], &handled_ptrs, 0);
+				}
+			}			
+			free(pointer_array);
+
+			//Dealloca B e return 0.
+			release_block(*ptr_addr, &available_zones);
+		}
+
+	}else if(size > newsize){ 
+		//Caso 3: |B| > newsize -> ia B' il sotto-blocco di lunghezza newsize prefisso di B: 
+		//Se esistono puntatori gestiti da storman che puntano a B ma non a B' allora return 2.
+		void* newend = start + newsize;
+		if(has_ptrs_left(start, newend, end, handled_ptrs)){
+			return 2;
+		}else{
+			//Altrimenti contrae B a destra e return 0
+			reduce_block(&start, &end, &newend, &available_zones); //STACK SMASHING
+		}
+
+		printf("case_3.2\n");
+		
 	}
 
-	//Caso 3 
-	if(block_ptr->block_dim > newsize){
-		//Deve contrarre B dall’estremità destra, sia B0 il sotto-blocco di lunghezza newdim prefisso di B.
-			//Se esistono puntatori gestiti da storman che puntano a B ma non a B0 (e che quindi sarebbero “tagliati fuori” dalla contrazione) allora return 2.
-			//Altrimenti contrae B a destra (liberando spazio nella zona Z di B) e return 0.
-	}
-}*/
+	//Caso 1: |B| = newsize || success
+	return 0;
+}

@@ -8,7 +8,7 @@ int pointer_assign(void** ptr_addr, void* val);
 
 //Modulo B
 void*** block_info(void** ptr_addr, void** lowaddr, void** highaddr, size_t* num_ptr);
-int pointer_info(void** ptr_addr, unsigned int* type);
+int pointer_info(void** ptr_addr, int* type);
 #define assign(__lv, __rv, __ret) \
 				/*STEP 1 
 				Se l’indirizzo di __lv è di uno dei puntatori gestiti da storman allora assegna 2 a __ret.*/ \
@@ -17,7 +17,9 @@ int pointer_info(void** ptr_addr, unsigned int* type);
 				}else{ \
 					/*STEP 2 
 					Se l’indirizzo di __lv non è contenuto in uno dei blocchi gestiti da storman allora assegna 1 a __ret.*/ \
-					if(!is_in_block(&__lv, available_zones)){ \
+					void* s_temp;\
+					void* e_temp;\
+					if(retrieve_block(&__lv, available_zones, &s_temp, &e_temp) == -1){ \
 						__ret = 1; \
 					}else{ \
 						/*STEP 3
@@ -28,7 +30,7 @@ int pointer_info(void** ptr_addr, unsigned int* type);
 				}
 				
 		
-//int block_realloc(void** ptr_addr, size_t newsize);
+int block_realloc(void** ptr_addr, size_t newsize);
 
 //Modulo E
 //int dedup_blocks(void*** pointers, int num_ptrs);

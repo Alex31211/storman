@@ -1,11 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
+#include <string.h>
 
 #define MAX_BLOCKS 10
 //Struttura che implementa il nodo della lista di puntatori acquisiti
 typedef struct ptr_node{
 	void* address;
+	int type; //tipo di storage puntato
 	struct ptr_node* next;
 }Pointer;
 
@@ -20,7 +22,7 @@ typedef struct zone_node{
 extern Pointer* handled_ptrs; //Testa della lista di puntatori acquisiti
 extern Zone* available_zones; //Testa della lista di zone
 
-void retrieve_available_space(Zone**, size_t, Zone**);
+int retrieve_allocation_zone(Zone**, size_t, Zone**);
 
 int is_handled(void*, Pointer*);
 
@@ -34,8 +36,18 @@ void release_ptr(void*, Pointer**);
 
 void release_block(void*, Zone**);
 
-void insert_new_pointer(void**, Pointer**);
+void insert_new_pointer(void*, Pointer**, int);
 
-int insert_new_block(Zone*, void*, void*);
+int insert_new_block(Zone**, void*, void*);
 
-int is_in_block(void*, Zone*);
+int is_avb_space(void*, Zone*, size_t);
+
+int retrieve_ptr_type(void*, Pointer*);
+
+int has_ptrs_left(void*, void*, void*, Pointer*);
+
+void reduce_block(void**, void**, void**, Zone**);
+
+void expand_block(void*, Zone**, size_t);
+
+void copy_block_content(void*, void*, size_t);
