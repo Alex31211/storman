@@ -1,5 +1,5 @@
 all:
-	gcc -g -O *.c -Wall -Wextra -Wno-unused-but-set-parameter -Wno-int-conversion -o program
+	gcc -ggdb *.c -Wall -Wextra -O0 -fsanitize=undefined -o program
 
 clean:
 	-rm program

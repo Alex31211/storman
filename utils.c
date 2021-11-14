@@ -7,21 +7,36 @@ Controlla se esistono zone allocate con spazio sufficiente per il blocco
 @return: zona su cui operare
 */
 int retrieve_allocation_zone(Zone** head, size_t size, Zone** ret){
-	Zone* prev = NULL;
 	Zone* curr = *head;
 
 	while(curr != NULL){
+
 		if(curr->available >= size){
 			*ret = curr;
 			return 1;
 		}
-		prev = curr;
+
 		curr = curr->next;
 	}
 
-	Zone* new_zone = (Zone*)malloc(2*size*sizeof(Zone));
+	return new_allocation_zone(head, size, ret);
+}
+
+int new_allocation_zone(Zone** head, size_t size, Zone** ret){
+
+	Zone* new_zone = (Zone*)malloc(sizeof(Zone));
+	new_zone->allocated_memory = (void*)malloc(2*size);
+
 	new_zone->total = 2*size;
 	new_zone->available = new_zone->total;
+
+	Zone* prev = NULL;
+	Zone* curr = *head;
+
+	while(curr != NULL){
+		prev = curr;
+		curr = curr->next;
+	}
 
 	if(prev == NULL){
         new_zone->next = *head;
@@ -68,6 +83,7 @@ int insert_new_block(Zone** zone, void* start, void* end){
 		if(s[i] == NULL){
 			s[i] = start;
 			e[i] = end;
+			
 			return 1;
 		}
 	}
@@ -90,7 +106,7 @@ int retrieve_block(void* ptr, Zone* head, void** start, void** end){
 				break;
 			}
 
-			if(s[i]<=ptr && ptr<=e[i]){
+			if(s[i]<=ptr && ptr<e[i]){
 				*start = s[i];
 				*end = e[i];
 
@@ -112,8 +128,10 @@ int has_multiple_ptr(void* ptr, Pointer* ptr_head, Zone* head){
 
 	if(retrieve_block(ptr, head, &s, &e) != -1){
 		Pointer* curr = ptr_head;
+		void* temp;
 		while(curr != NULL){
-			if(s <= curr->address && curr->address <= e){
+			temp = *(curr->address);
+			if(s <= temp && temp < e){
 				count++;
 			}
 			curr = curr->next;
@@ -123,11 +141,14 @@ int has_multiple_ptr(void* ptr, Pointer* ptr_head, Zone* head){
 	return count;
 }
 
-//Controlla se esistono puntatori spurii nella contrazione di un blocco
+//Controlla se esistono puntatori spuri nella contrazione di un blocco
 int has_ptrs_left(void* first, void* inter, void* last, Pointer* ptr_head){
 	Pointer* curr = ptr_head;
+	void* temp;
 	while(curr != NULL){
-		if(!(first <= curr->address && curr->address <= inter) && (inter <= curr->address && curr->address <= last)){
+		temp = *(curr->address);
+
+		if(!(first <= temp && temp <= inter) && (inter <= temp && temp <= last)){
 			return 1;
 		}
 		curr = curr->next;
@@ -138,11 +159,12 @@ int has_ptrs_left(void* first, void* inter, void* last, Pointer* ptr_head){
 
 //Pulisce la memoria che era riservata al blocco senza deallocare memoria dalla zona
 void clear_block(void** start, size_t size){
-	void* temp;
-    for(int i=0; i<(int)size; i++){
-    	temp = *start+i;
-    	temp = NULL;
-    }
+  	unsigned char *p = *start;
+  	while(size){
+  		p = 0;
+      	p++;
+      	size--;
+  	}
 }
 
 //Rilascia un intero blocco
@@ -171,7 +193,7 @@ void release_block(void* ptr, Zone** head){
 
 //Contrae un blocco a destra, riducendone la dimensione e liberando spazio nella zona
 void reduce_block(void** start, void** end, void** newend, Zone** head){
-	int i, j;
+	int i;
 	void** s;
 	void** e;
 
@@ -192,12 +214,13 @@ void reduce_block(void** start, void** end, void** newend, Zone** head){
 				size_t spare = (size_t)(*end - *newend);
 				curr->available = curr->available + spare;
 
-				void* temp;
-				for(j=1; j<=(int)spare; j++){
-					temp = *newend+j;
-					temp = NULL;
-				}
-
+				unsigned char *p = (*newend)+1;
+			  	while(spare){
+			  		p = 0;
+			      	p++;
+			      	spare--;
+			  	}
+			  	p = 0;
 				return;
 			}
 		}
@@ -257,13 +280,47 @@ void copy_block_content(void* new, void* old, size_t size){
 	}
 }
 
+int are_identical_blocks(void* s1, void* e1, void* s2, void* e2){
+	
+	//size
+	size_t size1 = (size_t)(e1-s1);
+	size_t size2 = (size_t)(e2-s2);
+
+	if(size1 != size2){
+		return 0;
+	}
+
+	//alignment
+	size_t alig1 = retrieve_alignment(s1);
+	size_t alig2 = retrieve_alignment(s2);
+
+	if(alig1 != alig2){
+		int rem = (alig2 > alig1 ? alig2%alig1 : alig1%alig2); //at LEAST log2(n) 0 bits (if more then it's ok)
+		if(rem != 0){
+			return 0;
+		}
+	}
+
+	//content
+	char* sc1 = (char*)s1;
+	char* sc2 = (char*)s2;
+	for(int i=0; i<(int)size1; i++){
+		if(*(sc1+i) != *(sc2+i)){
+			printf("NOT CONTENTED: %c - %c\n", *(sc1+i), *(sc2+i));
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
 //**********PUNTATORI*****************
 
 //Controlla se ptr è gestito da storman
 int is_handled(void* ptr, Pointer* head){
 	Pointer* curr = head;
 	while(curr != NULL){
-		if(curr->address == ptr){
+		if(*(curr->address) == ptr){
 
 			return 1;
 		}
@@ -273,7 +330,7 @@ int is_handled(void* ptr, Pointer* head){
 }
 
 //Aggiunge il nuovo puntatore alla lista globale dei puntatori gestiti
-void insert_new_pointer(void* ptr, Pointer** head, int type){
+void insert_new_pointer(void** ptr, Pointer** head, int type){
 	Pointer* prev = NULL;
 	Pointer* curr = *head;
 
@@ -283,11 +340,6 @@ void insert_new_pointer(void* ptr, Pointer** head, int type){
 	}
 
 	Pointer* new_ptr = (Pointer*)malloc(sizeof(Pointer));
-	if(new_ptr == NULL){
-		printf("Errore allocazione nuovo puntatore\n");
-		return;
-	}
-
 	new_ptr->address = ptr;
 	new_ptr->type = type;
 
@@ -298,6 +350,42 @@ void insert_new_pointer(void* ptr, Pointer** head, int type){
         prev->next = new_ptr;
         new_ptr->next = curr;
     }
+}
+
+void insert_corresp_ptrs(void*** array, void* start, int dim, void* address){
+	int i = 0;
+	void** temp1 = array[i];
+	void** temp2;
+	size_t offsets[dim];
+
+	offsets[i] = (size_t)(*temp1 - start);
+	for(i=1; i<dim; i++){
+		temp2 = array[i];
+		offsets[i] = (size_t)(*temp2 - *temp1);
+		temp1 = temp2;
+	}
+
+	for(i=0; i<dim; i++){
+		insert_new_pointer(address + offsets[i], &handled_ptrs, 0);
+	}
+}
+
+void** get_corresp_ptr(void* src_ptr, void* src_start, void* src_end, void** dest_start){
+
+	int i = 0;
+	void* temp = src_start;
+
+	while(temp != src_end){
+		if(temp == src_ptr){
+			break;
+		}
+		temp = src_start + 1;
+		i++;
+	}
+
+	void** dest_ptr = dest_start + i;
+
+	return dest_ptr;
 }
 
 //Rilascia un puntatore
@@ -333,6 +421,95 @@ int retrieve_ptr_type(void* ptr, Pointer* head){
 	return -1;
 }
 
+//**************GROUPS***************
+void** retrieve_snapshot(Pointer* head, void* start, void* end, int dim){
+	void** pointers = (void**)malloc(dim*sizeof(void*));
+	int idx = 0;
+
+	Pointer* curr = head;
+	void* temp;
+	while(curr != NULL){
+		temp = *(curr->address);
+		if(start <= temp && temp <= end){
+			pointers[idx] = temp;
+		}
+		curr = curr->next;
+	}
+
+	return pointers;
+}
+
+int is_in_snapshot(void* addr, void** ptrs, int len){
+
+	for(int i=0; i<len; i++){
+		if(ptrs[i] == addr){
+			return 1;
+		}
+	}
+
+	return 0;
+
+}
+
+int is_a_snapshot(void*** group, size_t num){
+
+	if(num <= 1){
+		return 0;
+	}
+
+	int count = 0;
+	void* temp = *group[0];
+
+	for(int i=1; i<(int)num; i++){
+		if(temp != *group[i]){
+			count++;
+		}
+		temp = *group[i];
+	}
+
+	if(count > 0){
+		return 1;
+	}
+
+	return 0;
+}
+
+//*************SETS*****************
+int add_in_set(void*** set, void* start, void* end, int idx, int dim){
+	if(duplicate_in_set(set[0], start, dim)){
+		return 0;
+	}
+
+	set[0][idx] = start;
+	set[1][idx] = end;
+
+	return 1;
+}
+
+int get_set(void**** sets, void* addr, int dim){
+	int i,j;
+	for(i=0; i<dim; i++){
+		for(j=0; j<dim; j++){
+			if(sets[i][0][j] == addr){
+				return i;
+			}
+		}
+	}
+
+	return -1;
+}
+
+int duplicate_in_set(void** set, void* addr, int dim){
+	int i;
+	for(i=0; i<dim; i++){
+		if(set[i] == addr){
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
 //*************ALTRO******************
 
 //Controlla se l'argomento è una potenza di 2
@@ -352,4 +529,19 @@ int is_power_of_two(size_t var){
 	}
 	
 	return 0;
+}
+
+//Recupera l'allineamento iniziale di un blocco allocato a partire da start
+//	start = (temp + (alignment-1)) & ~(alignment-1);
+size_t retrieve_alignment(void* start){
+
+	size_t alignment = 0;
+	size_t align = sizeof(void*);
+
+	while(((size_t)start % align) == 0){
+		alignment = align;
+		align *= 2;
+	}
+
+	return alignment;
 }

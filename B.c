@@ -40,9 +40,12 @@ void*** block_info (void** ptr_addr, void** lowaddr, void** highaddr, size_t* nu
 	//Copia gli indirizzi di p1, ..., pn in a.
 	int i = 0;
 	Pointer* curr = handled_ptrs;
+	void* temp;
 	while(curr != NULL){
-		if(*lowaddr <= curr->address && curr->address <= *highaddr){
-			a[i++] = &(curr->address);
+		temp = *(curr->address);
+		if(*lowaddr <= temp && temp < *highaddr){
+			a[i] = curr->address;
+			i++;
 		}
 		curr = curr->next;
 	}
@@ -106,7 +109,7 @@ int block_realloc(void** ptr_addr, size_t newsize){
 		}else{			
 			//Alloca un nuovo blocco B' con block_alloc(ptr_addr, align, newsize), stesso align di B, senza deallocare B.
 				//NOTE: block_alloc controlla il vincolo di avere alignement divisibile per 8 byte e che sia una potenza di 2!
-			size_t alignment; 
+			size_t alignment = 0; 
 			size_t align_temp = sizeof(void*);
 			while(((size_t)start % align_temp) == 0){
 				alignment = align_temp;
@@ -158,9 +161,6 @@ int block_realloc(void** ptr_addr, size_t newsize){
 			//Altrimenti contrae B a destra e return 0
 			reduce_block(&start, &end, &newend, &available_zones); //STACK SMASHING
 		}
-
-		printf("case_3.2\n");
-		
 	}
 
 	//Caso 1: |B| = newsize || success
