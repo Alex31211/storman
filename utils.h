@@ -45,8 +45,6 @@ int insert_new_block(Zone**, void*, void*);
 
 int is_avb_space(void*, Zone*, size_t);
 
-int retrieve_ptr_type(void*, Pointer*);
-
 int has_ptrs_left(void*, void*, void*, Pointer*);
 
 void reduce_block(void**, void**, void**, Zone**);
@@ -69,8 +67,10 @@ size_t retrieve_alignment(void*);
 
 int are_identical_blocks(void*, void*, void*, void*);
 
-int get_set(void****, void*, int);
-
 int add_in_set(void***, void*, void*, int, int);
 
 int duplicate_in_set(void**, void*, int);
+
+void reorder_addresses(void**, void**, int, int);
+
+void**** group_duplicates(void**, void**, int, int*, int**);

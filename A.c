@@ -106,6 +106,7 @@ int block_release (void** ptr_addr){
 		release_ptr(*ptr_addr, &handled_ptrs);
 		*ptr_addr = NULL;
 		return 1;
+
 	}else if(count == 1){
 		//STEP 3
 		/*Se invece B è puntato solo dal puntatore in ptr_addr:
@@ -211,7 +212,7 @@ int pointer_assign_internal(void** ptr_addr, void* val){
 			type = 1;
 		}
 		*ptr_addr = val;
-		insert_new_pointer(*ptr_addr, &handled_ptrs, type);		
+		insert_new_pointer(ptr_addr, &handled_ptrs, type);		
 	}
 
 	return 0;

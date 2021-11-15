@@ -320,8 +320,8 @@ int are_identical_blocks(void* s1, void* e1, void* s2, void* e2){
 int is_handled(void* ptr, Pointer* head){
 	Pointer* curr = head;
 	while(curr != NULL){
+		//printf("%p - %p\n", *(curr->address), ptr);
 		if(*(curr->address) == ptr){
-
 			return 1;
 		}
 		curr = curr->next;
@@ -373,13 +373,13 @@ void insert_corresp_ptrs(void*** array, void* start, int dim, void* address){
 void** get_corresp_ptr(void* src_ptr, void* src_start, void* src_end, void** dest_start){
 
 	int i = 0;
-	void* temp = src_start;
+	char* temp = (char*)src_start;
 
 	while(temp != src_end){
 		if(temp == src_ptr){
 			break;
 		}
-		temp = src_start + 1;
+		temp++;
 		i++;
 	}
 
@@ -407,18 +407,6 @@ void release_ptr(void* ptr, Pointer** head){
         prev = curr;
         curr = curr->next;
 	}
-}
-
-int retrieve_ptr_type(void* ptr, Pointer* head){
-	Pointer* curr = head;
-	while(curr != NULL){
-		if(curr->address == ptr){
-			return curr->type;
-		}
-		curr = curr->next;
-	}
-
-	return -1;
 }
 
 //**************GROUPS***************
@@ -486,19 +474,6 @@ int add_in_set(void*** set, void* start, void* end, int idx, int dim){
 	return 1;
 }
 
-int get_set(void**** sets, void* addr, int dim){
-	int i,j;
-	for(i=0; i<dim; i++){
-		for(j=0; j<dim; j++){
-			if(sets[i][0][j] == addr){
-				return i;
-			}
-		}
-	}
-
-	return -1;
-}
-
 int duplicate_in_set(void** set, void* addr, int dim){
 	int i;
 	for(i=0; i<dim; i++){
@@ -508,6 +483,82 @@ int duplicate_in_set(void** set, void* addr, int dim){
 	}
 
 	return 0;
+}
+
+void reorder_addresses(void** starts, void** ends, int count, int num_ptrs){
+	int i, flag;
+	void* temp;
+	do{
+		flag = 0;
+		for(i=0; i<count-1; i++){
+			if(starts[i] > starts[i+1]){
+				temp = starts[i];
+				starts[i] = starts[i+1];
+				starts[i+1] = temp;
+
+				temp = ends[i];
+				ends[i] = ends[i+1];
+				ends[i+1] = temp;
+
+				flag = 1;
+			}
+		}
+	}while(flag);
+
+	for(i=count+1; i<num_ptrs; i++){
+		starts[i] = NULL;
+		ends[i] = NULL;
+	}
+}
+
+void**** group_duplicates(void** starts, void** ends, int count, int* num_set, int** in_set){
+	int i,j;
+	int total_sets = 0; 
+	int num_block[count];
+
+	//Definizione dei sets
+	void**** sets = (void****)malloc(count*sizeof(void***));
+	int* tot_in_set = (int*)malloc(count*sizeof(int));
+
+	for(i=0; i<count; i++){
+		sets[i] = (void***)malloc(2*sizeof(void**));
+		sets[i][0] = (void**)malloc(count*sizeof(void*));
+		sets[i][1] = (void**)malloc(count*sizeof(void*));
+
+		num_block[i] = i;
+		tot_in_set[i] = 0;
+	}
+
+	//Popolamento
+	for(i=0; i<count; i++){
+		if(num_block[i] == -1){
+			continue;
+		}
+
+		sets[i][0][0] = starts[0];
+		sets[i][1][0] = ends[0];
+		num_block[i] = -1;
+		tot_in_set[total_sets] += 1;
+
+		for(j=i+1; j<count; j++){
+			if(num_block[j] == -1){
+				continue;
+			}
+
+			if(are_identical_blocks(starts[i], ends[i], starts[j], ends[j])){ 
+				add_in_set(sets[total_sets], starts[j], ends[j], tot_in_set[total_sets], count);				
+				num_block[j] = -1;
+				tot_in_set[total_sets] += 1;
+			}
+		}
+
+		total_sets++;
+	}
+
+	*num_set = total_sets;
+	*in_set = tot_in_set;
+
+	return sets;
 }
 
 //*************ALTRO******************

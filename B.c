@@ -55,7 +55,6 @@ void*** block_info (void** ptr_addr, void** lowaddr, void** highaddr, size_t* nu
 	return a;
 }
 
-
 /*
 @params
 	ptr_addr: indirizzo di un puntatore gestito da storman
@@ -71,11 +70,17 @@ int pointer_info(void** ptr_addr, int* type){
 		return 1;
 	}
 
-	*type = retrieve_ptr_type(*ptr_addr, handled_ptrs);
+	Pointer* curr = handled_ptrs;
+	while(curr != NULL){
+		if(*(curr->address) == *ptr_addr){
+			*type = curr->type;
+			break;
+		}
+		curr = curr->next;
+	}
 
 	return 0;
 }
-
 
 /*
 @params
@@ -120,30 +125,14 @@ int block_realloc(void** ptr_addr, size_t newsize){
 			//Copia il contenuto di B in B'.
 			void* newstart;
 			void* newend;
-			int i;
 			retrieve_block(*ptr_addr, available_zones, &newstart, &newend);
 			copy_block_content(newstart, start, size);
 						
 			//Aggiorna tutti i puntatori gestiti da storman che puntano a B in modo che puntino a B', mantenendo gli stessi offset.
 			size_t num;
-			void*** pointer_array = block_info(ptr_addr, &start, &end, &num);
+			void*** pointer_array = block_info(ptr_addr, start, end, &num);
 			if(num != 0){
-				void** temp1 = pointer_array[0];
-				void** temp2;
-
-				size_t offsets[num];
-				offsets[0] = (size_t)(*temp1 - start);
-
-				for(i=1; i<(int)num; i++){
-					temp2 = pointer_array[i];
-					offsets[i] = (size_t)(*temp2 - *temp1);
-					temp1 = temp2;
-				}
-
-				void* temp = newstart;
-				for(i=0; i<(int)num; i++){
-					insert_new_pointer(temp + offsets[i], &handled_ptrs, 0);
-				}
+				insert_corresp_ptrs(pointer_array, start, num, newstart);
 			}			
 			free(pointer_array);
 

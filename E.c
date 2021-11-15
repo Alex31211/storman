@@ -57,7 +57,6 @@ int pointer_assign(void** ptr_addr, void* val, void** mptr_addr){
 
 	//3. Esegui pointer_assign sul corrispondente di *ptr_addr in B'.
 	return pointer_assign_internal(mptr_addr, val);
-
 }
 
 /*
@@ -117,16 +116,15 @@ int dedup_blocks(void*** pointers, int num_ptrs){
 	//Se almeno uno dei puntatori in pointers fa parte di una snapshot, return 2.
 	void* start;
 	void* end;
-	size_t num;
-
+	size_t n;
 	void* starts[num_ptrs];
 	void* ends[num_ptrs];
 	int count = 0;
 	void*** group;
 
 	for(i=0; i<num_ptrs; i++){
-		group = block_info(pointers[i], &start, &end, &num);		
-		if(is_a_snapshot(group, num)){
+		group = block_info(pointers[i], &start, &end, &n);		
+		if(is_a_snapshot(group, n)){
 			free(group);
 			return 2;
 		}
@@ -139,87 +137,47 @@ int dedup_blocks(void*** pointers, int num_ptrs){
 	}
 
 	//...ed elencati secondo il loro ordine relativo in memoria
-	int flag;
-	void* temp;
-	do{
-		flag = 0;
-		for(i=0; i<count-1; i++){
-			if(starts[i] > starts[i+1]){
-				temp = starts[i];
-				starts[i] = starts[i+1];
-				starts[i+1] = temp;
-
-				temp = ends[i];
-				ends[i] = ends[i+1];
-				ends[i+1] = temp;
-
-				flag = 1;
-			}
-		}
-	}while(flag);
-
-	for(i=count+1; i<num_ptrs; i++){
-		starts[i] = NULL;
-		ends[i] = NULL;
-	}
+	reorder_addresses(starts, ends, count, num_ptrs);
 
 	//STEP 3
 	//Ripartisce (B1, ..., Bk) in (S1, ..., Sh) insiemi tali che, per ogni Bi, Bj e St:
-	int j; 
-	int num_set = 0;
-	int in_set[count];
-
-	//Definizione dei sets
-	void**** sets = (void****)malloc(count*sizeof(void***));
-	for(i=0; i<count; i++){
-		sets[i] = (void***)malloc(2*sizeof(void**));
-		sets[i][0] = (void**)malloc(count*sizeof(void*));
-		sets[i][1] = (void**)malloc(count*sizeof(void*));
-
-		in_set[i] = 0;
-	}
-	
-	//Popolamento
-	for(i=0; i<count; i++){
-		//Se i=0 -> primo blocco
-		if(i == 0){
-			sets[0][0][0] = starts[0];
-			sets[0][1][0] = ends[0];
-
-			in_set[0] += 1;
-		}
-
-		for(j=i+1; j<count; j++){
-			//se Bi == Bj (size, dati, allineamento) allora sono nello stesso insieme
-			if(are_identical_blocks(starts[i], ends[i], starts[j], ends[j])){ 
-				num_set = get_set(sets, starts[i], count);
-				if(num_set == -1){
-					break;
-				}
-
-				if(add_in_set(sets[num_set], starts[j], ends[j], in_set[num_set], count)){
-					in_set[num_set] += 1;
-				}
-			}else{ 
-			//else, sono in insiemi diversi
-				if(add_in_set(sets[num_set], starts[j], ends[j], in_set[num_set], count)){
-					in_set[num_set] += 1;
-				}
-			}
-		}
-	}
-
-	for(i=0; i<count; i++){
-		printf("%d\n", in_set[i]);
-	}
+	int num_set = 0;	
+	int* in_set;
+	void**** sets = group_duplicates(starts, ends, count, &num_set, &in_set);
 
 	//STEP 4
 	//Per ogni St:
 	//Sceglie un blocco Bi in St come rappresentante -> B(St).
-		//Per ogni B in {St − B(St)} cambia tutti i puntatori che puntano a B in modo che puntino a B(St).
-		//Per ogni B in {St − B(St)}, dealloca B.
+	int j;
+	void* s;
+	void* e;
+	void*** pointer_array;
 
+	for(i=0; i<num_set; i++){
+		start = sets[i][0][0];
+		end = sets[i][1][0];
+
+		//Per ogni B in {St − B(St)}
+		for(j=1; j<in_set[i]; j++){
+			s = sets[i][0][j];
+			e = sets[i][1][j];
+
+			//Cambia tutti i puntatori che puntano a B in modo che puntino a B(St)
+			pointer_array = block_info(&s, &s, &e, &n);
+			if(n != 0){
+				insert_corresp_ptrs(pointer_array, s, n, start);
+			}			
+			free(pointer_array);
+
+			//Dealloca B.
+			release_block(s, &available_zones);
+		}
+
+		free(sets[i]);
+	}
+
+	free(sets);
+	free(in_set);
 
 	return 0;
-
 }
