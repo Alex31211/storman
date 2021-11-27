@@ -117,11 +117,12 @@ int main(){
 	//E -> 
 
 	//--TOGGLE_GROUP--
-
+	/*
 	int* ptr;
 	int* ptr2;
 	int* ptr3;
 	int* ptr4;
+	int ret;
 
 	block_alloc((void**)&ptr, 2*sizeof(void*), 20*sizeof(int));
 
@@ -134,9 +135,9 @@ int main(){
 	assign(ptr2[10], 14, ret, (void**)&ptr2);
 
 	printf("Toggle:\n\tptr2[10] = %d;\n\tptr4[10] = %d;\n\tptr3[10] = %d;\n\tptr[10] = %d;\n", ptr2[10], ptr4[10], ptr3[10], ptr[10]); //14, 13, 13, 13
-
+	*/
 	//--DEDUP_BLOCKS--
-	/*
+	
 	int* ptr;
 	int* ptr2;
 	int* ptr3;
@@ -167,7 +168,7 @@ int main(){
 	printf("Dedup:\n\tres = %d.\n", res);
 
 	free(pointers);
-	*/
+	
 
 	return 0;
 }

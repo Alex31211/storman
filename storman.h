@@ -1,3 +1,5 @@
+#pragma once
+
 #include "utils.h"
 
 //Modulo A
@@ -55,7 +57,7 @@ int pointer_assign(void** ptr_addr, void* val, void** mptr_addr);
 			}else{ \
 				/*STEP 3
 				Se &__lv è contenuto nel blocco B gestito da storman ma B non è in uno snapshot.*/\
-				int num_ptr = has_multiple_ptr(&__lv, handled_ptrs, available_zones); \
+				int num_ptr = has_multiple_ptrs(start, end, handled_ptrs); \
 				if(num_ptr < 2){ \
 					__ret = 0; \
 					__lv = __rv; \
@@ -82,7 +84,7 @@ int pointer_assign(void** ptr_addr, void* val, void** mptr_addr);
 						\
 						pointer_array = block_info((void**)&__lv, &start, &end, &num);\
 						if(num != 0){\
-							insert_corresp_ptrs(pointer_array, start, (int)num, mptr_addr);\
+							insert_corresp_ptrs(*pointer_array, start, (int)num, mptr_addr);\
 						}\
 						\
 						/*Trova il corrispondente di &__lv in B'*/\

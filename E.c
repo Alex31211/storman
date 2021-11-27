@@ -20,7 +20,7 @@ int pointer_assign(void** ptr_addr, void* val, void** mptr_addr){
 	//Se *ptr_addr non fa parte di uno dei blocchi gestiti o non è in uno snapshot 
 	//allora pointer_assign si comporta come nella versione della parte A.
 	if((retrieve_block(*ptr_addr, available_zones, &start, &end) == -1) || 
-		((num_ptr = has_multiple_ptr(*ptr_addr, handled_ptrs, available_zones)) == 1)){
+		((num_ptr = has_multiple_ptrs(start, end, handled_ptrs)) == 1)){
 			return pointer_assign_internal(ptr_addr, val);
 	}
 
@@ -52,7 +52,7 @@ int pointer_assign(void** ptr_addr, void* val, void** mptr_addr){
 	size_t num;
 	void*** pointer_array = block_info(ptr_addr, &start, &end, &num);
 	if(num != 0){
-		insert_corresp_ptrs(pointer_array, start, (int)num, *mptr_addr);
+		insert_corresp_ptrs(*pointer_array, start, (int)num, *mptr_addr);
 	}
 
 	//3. Esegui pointer_assign sul corrispondente di *ptr_addr in B'.
@@ -165,7 +165,7 @@ int dedup_blocks(void*** pointers, int num_ptrs){
 			//Cambia tutti i puntatori che puntano a B in modo che puntino a B(St)
 			pointer_array = block_info(&s, &s, &e, &n);
 			if(n != 0){
-				insert_corresp_ptrs(pointer_array, s, n, start);
+				insert_corresp_ptrs(*pointer_array, s, n, start);
 			}			
 			free(pointer_array);
 

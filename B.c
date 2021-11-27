@@ -26,7 +26,7 @@ void*** block_info (void** ptr_addr, void** lowaddr, void** highaddr, size_t* nu
 
 	//STEP 3
 	//Trova tutti i puntatori p1, ..., pn gestiti da storman che puntano a B
-	int n = has_multiple_ptr(*ptr_addr, handled_ptrs, available_zones);
+	int n = has_multiple_ptrs(*lowaddr, *highaddr, handled_ptrs);
 
 	//STEP 4
 	//Alloca con malloc un array a di n void **.
@@ -109,7 +109,7 @@ int block_realloc(void** ptr_addr, size_t newsize){
 		//Caso 2: |B| < newsize
 		//Se nella zona Z che contiene B c’è spazio a sufficienza sulla destra di B, allora espande B sulla destra e return 0.
 		size_t needed_dim = newsize-size;
-		if(is_avb_space(*ptr_addr, available_zones, needed_dim)){
+		if(avb_space(*ptr_addr, available_zones, needed_dim)){
 			expand_block(end, &available_zones, needed_dim);
 		}else{			
 			//Alloca un nuovo blocco B' con block_alloc(ptr_addr, align, newsize), stesso align di B, senza deallocare B.
@@ -132,7 +132,7 @@ int block_realloc(void** ptr_addr, size_t newsize){
 			size_t num;
 			void*** pointer_array = block_info(ptr_addr, start, end, &num);
 			if(num != 0){
-				insert_corresp_ptrs(pointer_array, start, num, newstart);
+				insert_corresp_ptrs(*pointer_array, start, num, newstart);
 			}			
 			free(pointer_array);
 
@@ -141,14 +141,14 @@ int block_realloc(void** ptr_addr, size_t newsize){
 		}
 
 	}else if(size > newsize){ 
-		//Caso 3: |B| > newsize -> ia B' il sotto-blocco di lunghezza newsize prefisso di B: 
+		//Caso 3: |B| > newsize -> sia B' il sotto-blocco di lunghezza newsize prefisso di B: 
 		//Se esistono puntatori gestiti da storman che puntano a B ma non a B' allora return 2.
 		void* newend = start + newsize;
-		if(has_ptrs_left(start, newend, end, handled_ptrs)){
+		if(has_multiple_ptrs(newend, end, handled_ptrs) >= 1){
 			return 2;
 		}else{
 			//Altrimenti contrae B a destra e return 0
-			reduce_block(&start, &end, &newend, &available_zones); //STACK SMASHING
+			reduce_block(&start, &end, &newend, &available_zones); 
 		}
 	}
 
