@@ -10,7 +10,7 @@ int is_a_snapshot(void***, size_t);
 
 //int add_in_set(void***, void*, void*, int, int); --> internal
 
-int duplicate_in_set(void**, void*, int);
+//int duplicate_in_set(void**, void*, int); --> internal
 
 void reorder_addresses(void**, void**, int, int);
 

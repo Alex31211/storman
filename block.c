@@ -1,4 +1,5 @@
 #include "block.h"
+#include "storman.h"
 
 //Aggiunge il nuovo blocco alla lista locale della zona in cui è allocato
 /* Usage:
@@ -217,11 +218,8 @@ void expand_block(void* end, Zone** head, size_t needed_dim){
 	}
 }
 
-//Copia il un blocco in un altro
-/*Usage:
-	- B: block_realloc
-	- E: pointer_assign
-*/
+//Copia il contenuto di un blocco in un altro
+/*INTERNAL*/
 void copy_block_content(void* new, void* old, size_t size){
 	char* tmp_src = (char*)old;
 	char* tmp_dest = (char*)new;
@@ -229,6 +227,31 @@ void copy_block_content(void* new, void* old, size_t size){
 	for(int i=0; i<(int)size; i++){
 		tmp_dest[i] = tmp_src[i];
 	}
+}
+
+//Copia un blocco
+/*Usage:
+	- B: block_realloc
+	- E: pointer_assign
+*/
+void copy_block(void** ptr_addr, void** start, void** end, size_t size, size_t newsize){
+	//Allineamento
+	size_t alignment = retrieve_alignment(*start);
+	block_alloc(ptr_addr, alignment, newsize);
+
+	//Contenuto
+	void* newstart;
+	void* newend;
+	retrieve_block(*ptr_addr, available_zones, &newstart, &newend);
+	copy_block_content(newstart, *start, size);
+				
+	//Puntatori
+	size_t num;
+	void*** pointer_array = block_info(ptr_addr, *start, *end, &num);
+	if(num != 0){
+		insert_corresp_ptrs(*pointer_array, *start, num, newstart);
+	}			
+	free(pointer_array);
 }
 
 //Controlla se due blocchi sono uguali per dimensione, allineamento e contenuto

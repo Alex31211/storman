@@ -159,15 +159,13 @@ int pointer_assign_internal(void** ptr_addr, void* val){
 		return 1;
 	}
 
-	 
-	if(is_handled(*ptr_addr, handled_ptrs)){
-		//2. Altrimenti,
-		if(val == *ptr_addr){			
-			return 0;
-		}else{
-			//3. Se val non è interno al blocco puntato da *ptr_addr allora applica block_release senza rilasciare il puntatore
+	//2. Se l’indirizzo in ptr_addr è di un puntatore già gestito da storman 
+	if(is_handled(*ptr_addr, handled_ptrs)){		
+		if(val != *ptr_addr){						
 			int count;
+			//e val non è un indirizzo all’interno del blocco puntato da *ptr_addr
 			if(retrieve_block(*ptr_addr, available_zones, &start, &end) != -1){
+				//allora applica lo stesso procedimento di una chiamata block_release ma senza rilasciare il puntatore
 				if(!(start<=val && val<end)){
 					count = has_multiple_ptrs(start, end, handled_ptrs);
 					if(count > 1){
@@ -178,13 +176,9 @@ int pointer_assign_internal(void** ptr_addr, void* val){
 				}
 			}
 		}	
-
 	}else{
-		//STEP 4
-		//Se l’indirizzo in ptr_addr non è quello di un puntatore già gestito allora lo acquisisce
-		//Assegna l’indirizzo in val a *ptr_addr e return 0
-		int type = (*ptr_addr == NULL) ? 0 : 1;
-		
+		//3. Se l’indirizzo in ptr_addr non è quello di un puntatore già gestito allora lo acquisisce
+		int type = (*ptr_addr == NULL) ? 0 : 1;		
 		*ptr_addr = val;
 		insert_new_pointer(ptr_addr, &handled_ptrs, type);		
 	}

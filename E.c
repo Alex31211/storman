@@ -16,44 +16,22 @@ int pointer_assign(void** ptr_addr, void* val, void** mptr_addr){
 	void* end;
 	int num_ptr;
 
-	//STEP 1-2
-	//Se *ptr_addr non fa parte di uno dei blocchi gestiti o non è in uno snapshot 
-	//allora pointer_assign si comporta come nella versione della parte A.
-	if((retrieve_block(*ptr_addr, available_zones, &start, &end) == -1) || 
-		((num_ptr = has_multiple_ptrs(start, end, handled_ptrs)) == 1)){
-			return pointer_assign_internal(ptr_addr, val);
+	//1. Se *ptr_addr non fa parte di uno dei blocchi gestiti o non è in uno snapshot allora chiama pointer_assign_internal
+	if((retrieve_block(*ptr_addr, available_zones, &start, &end) != -1) && ((num_ptr = has_multiple_ptrs(start, end, handled_ptrs)) > 1)){
+		return pointer_assign_internal(ptr_addr, val);
 	}
 
-	//STEP 3
-	//Se l’indirizzo in ptr_addr fa parte di un blocco B gestito da storman e B è in uno snapshot
+	//2. Se l’indirizzo in ptr_addr fa parte di un blocco B gestito da storman e B è in uno snapshot
 
-	//1. Verifica che mptr_addr sia l’indirizzo di un puntatore appartenente allo snapshot di B. In caso contrario return 2.
+	//Verifica che mptr_addr sia l’indirizzo di un puntatore appartenente allo snapshot di B. In caso contrario ritorna 2.
 	void** snapshot = retrieve_snapshot(handled_ptrs, start, end, num_ptr);
 	if(!is_in_snapshot(*mptr_addr, snapshot, num_ptr)){
 		return 2;
 	}
 
-	//2. Alloca una copia di B in B'.
-
-	//Allineamento
-	size_t alignment = retrieve_alignment(start);
-
-	//Allocazione
+	//Alloca una copia di B in B'.
 	size_t size = (size_t)(end-start);
-	block_alloc(mptr_addr, alignment, size);
-
-	//Copia blocco
-	void* newstart;
-	void* newend;	
-	retrieve_block(*mptr_addr, available_zones, &newstart, &newend);
-	copy_block_content(newstart, start, size);
-
-	//Copia puntatori
-	size_t num;
-	void*** pointer_array = block_info(ptr_addr, &start, &end, &num);
-	if(num != 0){
-		insert_corresp_ptrs(*pointer_array, start, (int)num, *mptr_addr);
-	}
+	copy_block(ptr_addr, &start, &end, size, size);
 
 	//3. Esegui pointer_assign sul corrispondente di *ptr_addr in B'.
 	return pointer_assign_internal(mptr_addr, val);
@@ -93,6 +71,7 @@ int toggle_snapshot(void** ptr_addr){
 }
 
 /*
+Elimina blocchi duplicati, eleggendo un rappresentante e modificando i puntatori gestiti da storman
 Params:
 	pointers: l’indirizzo di un array di void **, allocato con malloc, contenente indirizzi di puntatori gestiti da storman.
 	num_ptrs: il numero di elementi dell’array puntato da pointers.
@@ -103,8 +82,7 @@ Return:
 */
 int dedup_blocks(void*** pointers, int num_ptrs){
 
-	//STEP 1
-	//Se almeno uno dei puntatori in pointers non è fra quelli gestiti da storman, return 1.
+	//1. Se almeno uno dei puntatori in pointers non è fra quelli gestiti da storman, ritorna con errore 1
 	int i;
 	for(i=0; i<num_ptrs; i++){
 		if(!is_handled(*pointers[i], handled_ptrs)){
@@ -112,8 +90,7 @@ int dedup_blocks(void*** pointers, int num_ptrs){
 		}
 	}
 
-	//STEP 2
-	//Se almeno uno dei puntatori in pointers fa parte di una snapshot, return 2.
+	//2. Se almeno uno dei puntatori in pointers fa parte di una snapshot, ritorna con errore 2
 	void* start;
 	void* end;
 	size_t n;
@@ -139,15 +116,12 @@ int dedup_blocks(void*** pointers, int num_ptrs){
 	//...ed elencati secondo il loro ordine relativo in memoria
 	reorder_addresses(starts, ends, count, num_ptrs);
 
-	//STEP 3
-	//Ripartisce (B1, ..., Bk) in (S1, ..., Sh) insiemi tali che, per ogni Bi, Bj e St:
+	//3. Ripartisce (B1, ..., Bk) in (S1, ..., Sh) insiemi tali per cui ogni insieme contiene blocchi duplicati
 	int num_set = 0;	
 	int* in_set;
 	void**** sets = group_duplicates(starts, ends, count, &num_set, &in_set);
 
-	//STEP 4
-	//Per ogni St:
-	//Sceglie un blocco Bi in St come rappresentante -> B(St).
+	//4. Per ogni insieme, sceglie un blocco Bi in St come rappresentante
 	int j;
 	void* s;
 	void* e;
@@ -157,12 +131,12 @@ int dedup_blocks(void*** pointers, int num_ptrs){
 		start = sets[i][0][0];
 		end = sets[i][1][0];
 
-		//Per ogni B in {St − B(St)}
+		//Per ogni altro blocco B dell'insieme
 		for(j=1; j<in_set[i]; j++){
 			s = sets[i][0][j];
 			e = sets[i][1][j];
 
-			//Cambia tutti i puntatori che puntano a B in modo che puntino a B(St)
+			//Cambia tutti i puntatori che puntano a B in modo che puntino al rappresentante
 			pointer_array = block_info(&s, &s, &e, &n);
 			if(n != 0){
 				insert_corresp_ptrs(*pointer_array, s, n, start);

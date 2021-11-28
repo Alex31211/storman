@@ -12,35 +12,23 @@ Trova tutti i puntatori gestiti da storman che puntano allo stesso blocco di *pt
 	void***: indirizzo di un array contenente tutti gli indirizzi dei puntatori gestiti da storman che puntano a B
 */
 void*** block_info (void** ptr_addr, void** lowaddr, void** highaddr, size_t* num_ptr){
-	//STEP 1
-	//Se ptr_addr non è l’indirizzo di un puntatore di storman return NULL.
-	if(!is_handled(*ptr_addr, handled_ptrs)){
+	//1. Se ptr_addr non è l’indirizzo di un puntatore di storman, allora ritorna con errore 0 (NULL).
+	if((!is_handled(*ptr_addr, handled_ptrs)) || (retrieve_block(*ptr_addr, available_zones, lowaddr, highaddr) == -1)){
 		return NULL;
 	}
 
-	//STEP 2
-	//Setta *lowaddr e *highaddr con gli indirizzi di partenza e fine del blocco puntato da *ptr_addr.
-	if(retrieve_block(*ptr_addr, available_zones, lowaddr, highaddr) == -1){
-		return NULL;
-	}
-
-	//STEP 3
-	//Trova tutti i puntatori p1, ..., pn gestiti da storman che puntano a B
-	int n = has_multiple_ptrs(*lowaddr, *highaddr, handled_ptrs);
-
-	//STEP 4
-	//Alloca con malloc un array a di n void **.
-	void*** a = malloc(n*sizeof(void**));
-	
-	//STEP 5
-	//Setta *num_ptr a n.
-	*num_ptr = n;
-
-	//STEP 6
-	//Copia gli indirizzi di p1, ..., pn in a.
+	//2. Trova tutti i puntatori gestiti da storman che puntano a B e li inserisce in a[]. Inserisce la dimensione di a[] in num_ptr.
+	int n;
+	void*** a;
 	int i = 0;
-	Pointer* curr = handled_ptrs;
+	Pointer* curr;
 	void* temp;
+
+	n = has_multiple_ptrs(*lowaddr, *highaddr, handled_ptrs);
+	a = malloc(n*sizeof(void**));
+	*num_ptr = n;
+	
+	curr = handled_ptrs;	
 	while(curr != NULL){
 		temp = *(curr->address);
 		if(*lowaddr <= temp && temp < *highaddr){
@@ -50,8 +38,7 @@ void*** block_info (void** ptr_addr, void** lowaddr, void** highaddr, size_t* nu
 		curr = curr->next;
 	}
 
-	//STEP 7
-	//Restituisce l’indirizzo di a.
+	//3. Restituisce l’indirizzo di a.
 	return a;
 }
 
@@ -93,65 +80,44 @@ int pointer_info(void** ptr_addr, int* type){
 */
 
 int block_realloc(void** ptr_addr, size_t newsize){
-	//STEP 0
-	if(!is_handled(*ptr_addr, handled_ptrs)){
+	//1. Se *ptr_addr non è l’indirizzo di un puntatore gestito da storman
+	void* start;
+	void* end;
+	if((!is_handled(*ptr_addr, handled_ptrs)) || (retrieve_block(*ptr_addr, available_zones, &start, &end) == -1)){
 		return 1;
 	}
 
-	//STEP 1
-	//Sia B il blocco puntato dal puntatore all’indirizzo in ptr_addr	
-	void* start;
-	void* end;
-	retrieve_block(*ptr_addr, available_zones, &start, &end);
+	//2. |B| < newsize
 	size_t size = (size_t)(end - start);
-
-	if(size < newsize){ 
-		//Caso 2: |B| < newsize
-		//Se nella zona Z che contiene B c’è spazio a sufficienza sulla destra di B, allora espande B sulla destra e return 0.
+	if(size < newsize){ 		
+		
 		size_t needed_dim = newsize-size;
+		//Se nella zona Z che contiene B c’è spazio a sufficienza sulla destra di B, allora espande B sulla destra e ritorna 0.
 		if(avb_space(*ptr_addr, available_zones, needed_dim)){
 			expand_block(end, &available_zones, needed_dim);
-		}else{			
-			//Alloca un nuovo blocco B' con block_alloc(ptr_addr, align, newsize), stesso align di B, senza deallocare B.
-				//NOTE: block_alloc controlla il vincolo di avere alignement divisibile per 8 byte e che sia una potenza di 2!
-			size_t alignment = 0; 
-			size_t align_temp = sizeof(void*);
-			while(((size_t)start % align_temp) == 0){
-				alignment = align_temp;
-				align_temp *= 2;
-			}
-			block_alloc(ptr_addr, alignment, newsize);
-
-			//Copia il contenuto di B in B'.
-			void* newstart;
-			void* newend;
-			retrieve_block(*ptr_addr, available_zones, &newstart, &newend);
-			copy_block_content(newstart, start, size);
-						
-			//Aggiorna tutti i puntatori gestiti da storman che puntano a B in modo che puntino a B', mantenendo gli stessi offset.
-			size_t num;
-			void*** pointer_array = block_info(ptr_addr, start, end, &num);
-			if(num != 0){
-				insert_corresp_ptrs(*pointer_array, start, num, newstart);
-			}			
-			free(pointer_array);
-
-			//Dealloca B e return 0.
-			release_block(*ptr_addr, &available_zones);
+			return 0;
 		}
 
-	}else if(size > newsize){ 
-		//Caso 3: |B| > newsize -> sia B' il sotto-blocco di lunghezza newsize prefisso di B: 
-		//Se esistono puntatori gestiti da storman che puntano a B ma non a B' allora return 2.
-		void* newend = start + newsize;
-		if(has_multiple_ptrs(newend, end, handled_ptrs) >= 1){
-			return 2;
-		}else{
-			//Altrimenti contrae B a destra e return 0
-			reduce_block(&start, &end, &newend, &available_zones); 
-		}
+		//Altrimenti, alloca un nuovo blocco B', dealloca B e ritorna 0.			
+		copy_block(ptr_addr, &start, &end, size, newsize);
+		release_block(*ptr_addr, &available_zones);
+		return 0;
 	}
 
-	//Caso 1: |B| = newsize || success
+	//3. |B| > newsize
+	if(size > newsize){ 
+		//Sia B' il sotto-blocco di lunghezza newsize prefisso di B: 
+		void* newend = start + newsize;
+		
+		//Se esistono puntatori gestiti da storman che puntano a B ma non a B' allora ritorna con errore 2.	
+		if(has_multiple_ptrs(newend, end, handled_ptrs) >= 1){
+			return 2;
+		}
+
+		//Altrimenti contrae B a destra e ritorna 0
+		reduce_block(&start, &end, &newend, &available_zones); 
+	}
+
+	//4. |B| = newsize
 	return 0;
 }

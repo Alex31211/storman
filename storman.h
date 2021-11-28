@@ -12,20 +12,17 @@ int pointer_assign_internal(void** ptr_addr, void* val);
 void*** block_info(void** ptr_addr, void** lowaddr, void** highaddr, size_t* num_ptr);
 int pointer_info(void** ptr_addr, int* type);
 #define assign_internal(__lv, __rv, __ret) \
-	/*STEP 1 
-	Se l’indirizzo di __lv è di uno dei puntatori gestiti da storman allora assegna 2 a __ret.*/ \
+	/*1. Se l’indirizzo di __lv è di uno dei puntatori gestiti da storman allora assegna 2 a __ret.*/ \
 	if(is_handled(&__lv, handled_ptrs)){ \
 		__ret = 2; \
 	}else{ \
-		/*STEP 2 
-		Se l’indirizzo di __lv non è contenuto in uno dei blocchi gestiti da storman allora assegna 1 a __ret.*/ \
+		/*2. Se l’indirizzo di __lv non è contenuto in uno dei blocchi gestiti da storman allora assegna 1 a __ret.*/ \
 		void* s_temp;\
 		void* e_temp;\
 		if(retrieve_block(&__lv, available_zones, &s_temp, &e_temp) == -1){ \
 			__ret = 1; \
 		}else{ \
-			/*STEP 3
-			Assegna 0 a __ret e assegna __rv a __lv.*/ \
+			/*3. Assegna 0 a __ret e assegna __rv a __lv.*/ \
 			__ret = 0; \
 			__lv = __rv; \
 		} \
@@ -39,34 +36,29 @@ int dedup_blocks(void*** pointers, int num_ptrs);
 int toggle_snapshot(void** ptr_addr);
 int pointer_assign(void** ptr_addr, void* val, void** mptr_addr);
 #define assign(__lv , __rv , __ret , mptr_addr) \
-	/*STEP 0*/\
 	if(mptr_addr == NULL){ \
-		assign_internal(__lv , __rv , __ret);\
-	}else{\
-		/*STEP 1		
-		Se &__lv è l’indirizzo di uno dei puntatori gestiti da storman.*/\
+		assign_internal(__lv , __rv , __ret); \
+	}else{ \
+		/*1. Se &__lv è l’indirizzo di uno dei puntatori gestiti da storman.*/ \
 		if(is_handled(&__lv, handled_ptrs)){ \
 			__ret = 2; \
 		}else{ \
-			/*STEP 2
-			Se &__lv non è contenuto in uno dei blocchi gestiti da storman.*/ \
-			void* start;\
-			void* end;\
+			/*2. Se &__lv non è contenuto in uno dei blocchi gestiti da storman.*/ \
+			void* start; \
+			void* end; \
 			if(retrieve_block(&__lv, available_zones, &start, &end) == -1){ \
 				__ret = 1; \
 			}else{ \
-				/*STEP 3
-				Se &__lv è contenuto nel blocco B gestito da storman ma B non è in uno snapshot.*/\
+				/*3. Se &__lv è contenuto nel blocco B gestito da storman ma B non è in uno snapshot.*/ \
 				int num_ptr = has_multiple_ptrs(start, end, handled_ptrs); \
 				if(num_ptr < 2){ \
 					__ret = 0; \
 					__lv = __rv; \
 				}else{ \
-					/*STEP 4
-					Se &__lv è contenuto nel blocco B gestito da storman e B è in uno snapshot.
-					Verifica che mptr_addr appartiene allo snapshot di B. In caso contrario assegna 3 a __ret.*/\
-					void** snapshot = retrieve_snapshot(handled_ptrs, start, end, num_ptr);\
-					if(!is_in_snapshot(mptr_addr, snapshot, num_ptr)){\
+					/*4. Se &__lv è contenuto nel blocco B gestito da storman e B è in uno snapshot.
+					Verifica che mptr_addr appartiene allo snapshot di B. In caso contrario assegna 3 a __ret.*/ \
+					void** snapshot = retrieve_snapshot(handled_ptrs, start, end, num_ptr); \
+					if(!is_in_snapshot(mptr_addr, snapshot, num_ptr)){ \
 						__ret = 3;\
 					}else{ \
 						/*Mantiene la proprietà degli snapshot.*/\
