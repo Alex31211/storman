@@ -61,25 +61,27 @@ void insert_new_pointer(void** ptr, Pointer** head, int type){
 	- E: pointer_assign
 		 dedup_blocks
 */
-void insert_corresp_ptrs(void** array, void* start, int dim, void* address){
+void insert_corresp_ptrs(void** array, void* base, int dim, void* newbase){
 
-	void* temp1 = start;
-	void* temp2;
-	size_t offsets[dim];
+	void* temp1 = base;
+	void* addr;
 
 	int i=0;
 	do{
-		temp2 = array[i];
-		offsets[i] = (size_t)(temp2 - temp1);
-		insert_new_pointer(address + offsets[i], &handled_ptrs, 0);
-		temp1 = temp2;
+		//prende ogni puntatore che punta al blocco da deallocare
+		addr = newbase + (size_t)(array[i] - temp1); //calcola l'indirizzo del puntatore corrispondente che punterà al nuovo blocco 
 
+		insert_new_pointer(addr, &handled_ptrs, 0); //inserisci il nuovo puntatore
+
+		temp1 = array[i];
 		i++;
 	}while(i < dim);
 }
 
 //Trova il puntatore corrispondente a src che punta ad un blocco da copiare
-
+/*Usage:
+	- E: pointer_assign
+*/
 void** get_corresp_ptr(void* src_ptr, void* src_start, void* src_end, void** dest_start){
 
 	int i = 0;
@@ -99,6 +101,7 @@ void** get_corresp_ptr(void* src_ptr, void* src_start, void* src_end, void** des
 
 //Rilascia un puntatore
 /*
+Usage:
 	- A: block_release
 		 pointer_release 
 */
@@ -107,17 +110,44 @@ void release_ptr(void* ptr, Pointer** head){
     Pointer* curr = *head;
 
     while(curr != NULL){
-		if(curr->address == ptr){
+		if(*(curr->address) == ptr){
 			if(prev == NULL){
                 *head = curr->next;
             }else{
                 prev->next = curr->next;
             }
-	  
 	        free(curr);
             return;
         }
         prev = curr;
         curr = curr->next;
 	}
+}
+
+//Rilascia i puntatori di un blocco che viene deallocato
+/*Usage:
+	- E: dedup_blocks
+*/
+void release_ptrs(void*** ptrs, size_t dim, Pointer** head){
+
+	for(int i=0; i<(int)dim; i++){
+		release_ptr(*ptrs[i], head);
+	}
+}
+
+//Trova il puntatore relativo al blocco nella lista dei puntatori gestiti
+/*USAGE:
+	- B: block_info
+*/
+void** retrieve_ptr(Pointer* curr, void* start, void* end){
+	void* temp;
+	while(curr != NULL){
+		temp = *(curr->address);
+		if(start <= temp && temp < end){
+			return curr->address;			
+		}
+		curr = curr->next;
+	}
+
+	return NULL;
 }

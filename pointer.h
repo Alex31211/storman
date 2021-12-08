@@ -2,6 +2,7 @@
 
 #include <stddef.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 //Struttura che implementa il nodo della lista di puntatori acquisiti
 typedef struct ptr_node{
@@ -21,3 +22,7 @@ void insert_corresp_ptrs(void**, void*, int, void*);
 void** get_corresp_ptr(void*, void*, void*, void**);
 
 void release_ptr(void*, Pointer**);
+
+void release_ptrs(void***, size_t, Pointer**);
+
+void** retrieve_ptr(Pointer*, void*, void*);

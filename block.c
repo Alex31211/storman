@@ -32,7 +32,7 @@ int insert_new_block(Zone** zone, void* start, void* end){
 	- E: pointer_assign
 */
 int retrieve_block(void* ptr, Zone* head, void** start, void** end){
-	int i, ret;
+	int i;
 	void** s;
 	void** e;
 
@@ -44,7 +44,6 @@ int retrieve_block(void* ptr, Zone* head, void** start, void** end){
 		for(i=0; i<MAX_BLOCKS; i++){
 
 			if(s[i] == NULL){
-				ret = -1;
 				break;
 			}
 
@@ -52,14 +51,13 @@ int retrieve_block(void* ptr, Zone* head, void** start, void** end){
 				*start = s[i];
 				*end = e[i];
 
-				ret = i;
-				break;
+				return 1;
 			}
 		}
 		curr = curr->next;
 	}
 
-	return ret;
+	return -1;
 }
 
 //Pulisce la memoria che era riservata al blocco senza deallocare memoria dalla zona
@@ -103,6 +101,8 @@ void release_block(void* ptr, Zone** head){
     curr->available += size;
     clear_block(curr->starting_addr, size);
     order_metadata(&curr, idx);
+
+    
 }
 
 //Controlla quanti ptr gestiti puntano a block
@@ -234,7 +234,7 @@ void copy_block_content(void* new, void* old, size_t size){
 	- B: block_realloc
 	- E: pointer_assign
 */
-void copy_block(void** ptr_addr, void** start, void** end, size_t size, size_t newsize){
+void* copy_block(void** ptr_addr, void** start, void** end, size_t size, size_t newsize){
 	//Allineamento
 	size_t alignment = retrieve_alignment(*start);
 	block_alloc(ptr_addr, alignment, newsize);
@@ -252,6 +252,8 @@ void copy_block(void** ptr_addr, void** start, void** end, size_t size, size_t n
 		insert_corresp_ptrs(*pointer_array, *start, num, newstart);
 	}			
 	free(pointer_array);
+
+	return newstart;
 }
 
 //Controlla se due blocchi sono uguali per dimensione, allineamento e contenuto

@@ -4,12 +4,18 @@
 
 #define MAX_BLOCKS 10
 
+typedef enum groupType{
+	SNAPSHOT = 0,
+	ALIAS = 1
+}Type;
+
 typedef struct zone_node{
 	size_t total;
 	size_t available;
 	void* allocated_memory;
 	void* starting_addr[MAX_BLOCKS];
 	void* ending_addr[MAX_BLOCKS];
+	Type type[MAX_BLOCKS];
 	struct zone_node* next;
 }Zone;
 

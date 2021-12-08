@@ -36,56 +36,38 @@ int dedup_blocks(void*** pointers, int num_ptrs);
 int toggle_snapshot(void** ptr_addr);
 int pointer_assign(void** ptr_addr, void* val, void** mptr_addr);
 #define assign(__lv , __rv , __ret , mptr_addr) \
-	if(mptr_addr == NULL){ \
-		assign_internal(__lv , __rv , __ret); \
+	/*1. Se __lv è uno dei puntatori gestiti da storman ritorna 2*/ \
+	if(is_handled(&__lv, handled_ptrs)){ \
+		__ret = 2; \
 	}else{ \
-		/*1. Se &__lv è l’indirizzo di uno dei puntatori gestiti da storman.*/ \
-		if(is_handled(&__lv, handled_ptrs)){ \
-			__ret = 2; \
+		/*2. Se __lv non è contenuto in uno (B) dei blocchi gestiti da storman ritorna 1*/ \
+		void* start; \
+		void* end; \
+		if(retrieve_block(&__lv, available_zones, &start, &end) == -1){ \
+			__ret = 1; \
 		}else{ \
-			/*2. Se &__lv non è contenuto in uno dei blocchi gestiti da storman.*/ \
-			void* start; \
-			void* end; \
-			if(retrieve_block(&__lv, available_zones, &start, &end) == -1){ \
-				__ret = 1; \
+			/*3. Se B non è in uno snapshot, assegna __rv a __lv e ritorna 0.*/ \
+			if(!is_a_snapshot(start, end, &available_zones)){ \
+				__ret = 0; \
+				__lv = __rv; \
 			}else{ \
-				/*3. Se &__lv è contenuto nel blocco B gestito da storman ma B non è in uno snapshot.*/ \
+				/*4. Se mptr_addr non appartiene allo snapshot di B, ritorna 3*/ \
 				int num_ptr = has_multiple_ptrs(start, end, handled_ptrs); \
-				if(num_ptr < 2){ \
-					__ret = 0; \
-					__lv = __rv; \
+				void** snapshot = retrieve_snapshot(handled_ptrs, start, end, num_ptr); \
+				if((mptr_addr == NULL) || (!is_in_snapshot(mptr_addr, snapshot, num_ptr))){ \
+					__ret = 3;\
 				}else{ \
-					/*4. Se &__lv è contenuto nel blocco B gestito da storman e B è in uno snapshot.
-					Verifica che mptr_addr appartiene allo snapshot di B. In caso contrario assegna 3 a __ret.*/ \
-					void** snapshot = retrieve_snapshot(handled_ptrs, start, end, num_ptr); \
-					if(!is_in_snapshot(mptr_addr, snapshot, num_ptr)){ \
-						__ret = 3;\
-					}else{ \
-						/*Mantiene la proprietà degli snapshot.*/\
-						void* newstart;\
-						void* newend;	\
-						size_t num, size, alignment;\
-						void*** pointer_array;\
-						\
-						size = (size_t)(end-start);\
-						alignment = retrieve_alignment(start);\
-						block_alloc(mptr_addr, alignment, size);\
-						\
-						retrieve_block(mptr_addr, available_zones, &newstart, &newend);\
-						copy_block_content(newstart, start, size);\
-						\
-						pointer_array = block_info((void**)&__lv, &start, &end, &num);\
-						if(num != 0){\
-							insert_corresp_ptrs(*pointer_array, start, (int)num, mptr_addr);\
-						}\
-						\
-						/*Trova il corrispondente di &__lv in B'*/\
-						void** newptr = get_corresp_ptr(&__lv, start, end, newstart);\
-						\
-						/*Quindi __rv sarà assegnato non a __lv ma al corrispondente indirizzo in B'.*/\
-						(**(char**)newptr) = __rv;\
-					} \
-				}\
+					/*Mantiene la proprietà degli snapshot.*/\
+					size_t size = (size_t)(end-start);\
+					void* newstart = copy_block((void*)&__lv, &start, &end, size, size);\
+					void* newend = (void*)((size_t)newstart + size); \
+					/*Trova il corrispondente di &__lv in B'*/\
+					void** newptr = get_corresp_ptr(&__lv, start, end, newstart);\
+					\
+					/*Quindi __rv sarà assegnato non a __lv ma al corrispondente indirizzo in B'.*/\
+					(**(char**)newptr) = __rv;\
+					to_alias(newstart, newend, &available_zones);\
+				} \
 			}\
 		}\
 	}

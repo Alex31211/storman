@@ -17,6 +17,7 @@ void** retrieve_snapshot(Pointer* head, void* start, void* end, int dim){
 			pointers[idx] = temp;
 		}
 		curr = curr->next;
+		idx++;
 	}
 
 	return pointers;
@@ -36,42 +37,116 @@ int is_in_snapshot(void* addr, void** ptrs, int len){
 	}
 
 	return 0;
-
 }
 
-//Verifica se il gruppo è uno snapshot
+//Verifica se il blocco è in uno snapshot
 /*Usage:
 	-E: toggle_snapshot
 		dedup_blocks
+	- assign MACRO
 */
-int is_a_snapshot(void*** group, size_t num){
-
-	if(num <= 1){
-		return 0;
+int is_a_snapshot(void* start, void* end, Zone** head){
+	int flag;
+	int num_ptrs = has_multiple_ptrs(start, end, handled_ptrs);
+	if(num_ptrs == 1){
+		flag = 1; //il blocco ha un solo puntatore -> storman si comporta come se fosse un alias
 	}
 
-	int count = 0;
-	void* temp = *group[0];
+	void** s;
+	void** e;
+	int i;
+	Zone* curr = *head;
+	while(curr != NULL){
+		s = curr->starting_addr;
+		e = curr->ending_addr;
 
-	for(int i=1; i<(int)num; i++){
-		if(temp != *group[i]){
-			count++;
+		for(i=0; i<MAX_BLOCKS; i++){
+
+			if(s[i] == NULL){
+				break;
+			}
+
+			if(s[i]==start && e[i]==end){
+				if(flag){
+					(curr->type)[i] = ALIAS;
+					return 0;
+				}
+
+				return 1;
+			}
 		}
-		temp = *group[i];
+		curr = curr->next;
 	}
 
-	if(count > 0){
-		return 1;
-	}
-
-	return 0;
+	//il gruppo è uno snapshot: ha più puntatori e non nella lista degli alias
+	return -1;
 }
 
-
-
-//
+//Aggiunge lo snapshot alla lista degli alias
 /*Usage:
+	- E: toggle_snapshot
+*/
+void to_alias(void* start, void* end, Zone** head){
+	void** s;
+	void** e;
+	int i;
+	Zone* curr = *head;
+	
+	while(curr != NULL){
+		s = curr->starting_addr;
+		e = curr->ending_addr;
 
+		for(i=0; i<MAX_BLOCKS; i++){
+
+			if(s[i] == NULL){
+				break;
+			}
+
+			if(s[i]==start && e[i]==end){
+				(curr->type)[i] = ALIAS;
+				return;
+			}
+		}
+		curr = curr->next;
+	}
+
+	return;
+}
+
+//Rimuove il gruppo dalla lista degli alias senza deallocarlo: resta come snapshot
+/*Usage:
+	- E: toggle_snapshot
+*/
+void to_snapshot(void* start, void* end, Zone** head){
+	void** s;
+	void** e;
+	int i;
+	Zone* curr = *head;
+	
+	while(curr != NULL){
+		s = curr->starting_addr;
+		e = curr->ending_addr;
+
+		for(i=0; i<MAX_BLOCKS; i++){
+
+			if(s[i] == NULL){
+				break;
+			}
+
+			if(s[i]==start && e[i]==end){
+				(curr->type)[i] = SNAPSHOT;
+				return;
+			}
+		}
+		curr = curr->next;
+	}
+
+	return;
+}
+
+//Ordina in base all'indirizzo di partenza un set di blocchi
+/*Usage:
+	- E: dedup_blocks
 */
 void reorder_addresses(void** starts, void** ends, int count, int num_ptrs){
 	int i, flag;
@@ -158,8 +233,8 @@ void**** group_duplicates(void** starts, void** ends, int count, int* num_set, i
 		}
 
 		//Aggiunge il blocco all'insieme
-		sets[i][0][0] = starts[0]; 	
-		sets[i][1][0] = ends[0]; 
+		sets[total_sets][0][0] = starts[i]; 
+		sets[total_sets][1][0] = ends[i]; 
 		num_block[i] = -1; 			  //Etichetta il blocco come analizzato
 		tot_in_set[total_sets] += 1;  //Incrementa il numero di blocchi nell'insieme
 
@@ -171,7 +246,7 @@ void**** group_duplicates(void** starts, void** ends, int count, int* num_set, i
 			//Per ogni duplicato trovato...
 			if(are_identical_blocks(starts[i], ends[i], starts[j], ends[j])){ 
 				//Aggiunge il blocco all'insieme
-				add_in_set(sets[total_sets], starts[j], ends[j], tot_in_set[total_sets], count);				
+				add_in_set(sets[total_sets], starts[j], ends[j], tot_in_set[total_sets], count);			
 				num_block[j] = -1; 				//Etichetta il blocco come duplicato
 				tot_in_set[total_sets] += 1;	//Incrementa il numero di blocchi nell'insieme
 			}

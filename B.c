@@ -14,30 +14,27 @@ Trova tutti i puntatori gestiti da storman che puntano allo stesso blocco di *pt
 void*** block_info (void** ptr_addr, void** lowaddr, void** highaddr, size_t* num_ptr){
 	//1. Se ptr_addr non è l’indirizzo di un puntatore di storman, allora ritorna con errore 0 (NULL).
 	if((!is_handled(*ptr_addr, handled_ptrs)) || (retrieve_block(*ptr_addr, available_zones, lowaddr, highaddr) == -1)){
+		*num_ptr = 0;
 		return NULL;
 	}
 
 	//2. Trova tutti i puntatori gestiti da storman che puntano a B e li inserisce in a[]. Inserisce la dimensione di a[] in num_ptr.
-	int n;
-	void*** a;
+	int n = has_multiple_ptrs(*lowaddr, *highaddr, handled_ptrs);
+	void*** a = malloc(n*sizeof(void**));
 	int i = 0;
-	Pointer* curr;
-	void* temp;
-
-	n = has_multiple_ptrs(*lowaddr, *highaddr, handled_ptrs);
-	a = malloc(n*sizeof(void**));
 	*num_ptr = n;
 	
-	curr = handled_ptrs;	
+	Pointer* curr = handled_ptrs;
+	void* temp;
 	while(curr != NULL){
 		temp = *(curr->address);
 		if(*lowaddr <= temp && temp < *highaddr){
 			a[i] = curr->address;
-			i++;
+			i++;			
 		}
 		curr = curr->next;
 	}
-
+	
 	//3. Restituisce l’indirizzo di a.
 	return a;
 }

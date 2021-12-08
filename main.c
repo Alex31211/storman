@@ -116,7 +116,7 @@ int main(){
 
 	//E -> 
 
-	//--TOGGLE_GROUP--
+	//--TOGGLE_SNAPSHOT--
 	/*
 	int* ptr;
 	int* ptr2;
@@ -134,7 +134,11 @@ int main(){
 	toggle_snapshot((void**)&ptr3);
 	assign(ptr2[10], 14, ret, (void**)&ptr2);
 
-	printf("Toggle:\n\tptr2[10] = %d;\n\tptr4[10] = %d;\n\tptr3[10] = %d;\n\tptr[10] = %d;\n", ptr2[10], ptr4[10], ptr3[10], ptr[10]); //14, 13, 13, 13
+	printf("Toggle:\n\t");
+	printf("ptr2[10] = %d;\n\t", ptr2[10]); //14
+	printf("ptr4[10] = %d;\n\t", ptr4[10]); //13
+	printf("ptr3[10] = %d;\n\t", ptr3[10]); //13
+	printf("ptr[10] = %d;\n", ptr[10]); 	//13
 	*/
 	//--DEDUP_BLOCKS--
 	
@@ -163,12 +167,52 @@ int main(){
 	pointers[1] = (char**)&ptr2;
 	pointers[2] = (char**)&ptr3;
 	pointers[3] = (char**)&ptr4;
+/*
+	void* start;
+	void* end;
+	void* start3;
+	void* end3;
+	retrieve_block((void*)ptr, available_zones, &start, &end);
+	printf("start = %p; end = %p\n", start, end);
+	retrieve_block((void*)ptr3, available_zones, &start3, &end3);
+	printf("start3 = %p; end3 = %p\n", start3, end3);
 
-	int res = dedup_blocks((void***)pointers, 4);
-	printf("Dedup:\n\tres = %d.\n", res);
+	void* start2;
+	void* end2;
+	void* start4;
+	void* end4;
+	retrieve_block((void*)ptr2, available_zones, &start2, &end2);
+	retrieve_block((void*)ptr4, available_zones, &start4, &end4);
+	printf("start2 = %p; end2 = %p\n", start2, end2);
+	printf("start4 = %p; end4 = %p\n", start4, end4);
+*/
+	
+	Pointer* curr = handled_ptrs;
+	while(curr != NULL){
+		printf("%p\n", *(curr->address));
+		curr = curr->next;
+	}
+	printf("\n");
+	
+	dedup_blocks((void***)pointers, 4);
+	
+	curr = handled_ptrs;
+	while(curr != NULL){
+		printf("%p\n", *(curr->address));
+		curr = curr->next;
+	}
+/*
+	retrieve_block((void*)ptr, available_zones, &start, &end);
+	retrieve_block((void*)ptr3, available_zones, &start3, &end3);
+	printf("start = %p; end = %p\n", start, end);
+	printf("start3 = %p; end3 = %p\n", start3, end3);
+
+	retrieve_block((void*)ptr2, available_zones, &start2, &end2);
+	retrieve_block((void*)ptr4, available_zones, &start4, &end4);
+	printf("start2 = %p; end2 = %p\n", start2, end2);
+	printf("start4 = %p; end4 = %p\n", start4, end4);*/
 
 	free(pointers);
 	
-
 	return 0;
 }
