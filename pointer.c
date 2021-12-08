@@ -64,15 +64,16 @@ void insert_new_pointer(void** ptr, Pointer** head, int type){
 void insert_corresp_ptrs(void** array, void* base, int dim, void* newbase){
 
 	void* temp1 = base;
-	void* addr;
+	void* temp2 = newbase;
+	void** addr = NULL;
 
 	int i=0;
 	do{
 		//prende ogni puntatore che punta al blocco da deallocare
-		addr = newbase + (size_t)(array[i] - temp1); //calcola l'indirizzo del puntatore corrispondente che punterà al nuovo blocco 
-
 		insert_new_pointer(addr, &handled_ptrs, 0); //inserisci il nuovo puntatore
+		*addr = temp2 + (size_t)(array[i] - temp1); //calcola l'indirizzo del puntatore corrispondente che punterà al nuovo blocco 
 
+		temp2 = addr;
 		temp1 = array[i];
 		i++;
 	}while(i < dim);
@@ -150,4 +151,30 @@ void** retrieve_ptr(Pointer* curr, void* start, void* end){
 	}
 
 	return NULL;
+}
+
+//Aggiorna i puntatori dopo dedup_blocks
+/*Usage:
+	- E: dedup_blocks
+*/
+void update_ptrs(void*** pointers, void** copy, int i, int j, int in_set, int tot){
+	int z;
+	for(z=0; z<tot; z++){
+		if(*pointers[z] == copy[i*in_set + j]){
+			*pointers[z] = copy[i*in_set];				
+		}
+	}
+}
+
+//Copia l'array di puntatori in un altro array, per operare senza modificare l'array originale
+/*Usage:
+	- E: dedup_blocks
+*/
+void** copy_ptrs(void*** pointers, int tot){
+	void** copy = (void**)malloc(tot*sizeof(void **));
+	for(int i=0; i<tot; i++){
+		copy[i] = *pointers[i];
+	}
+	
+	return copy;
 }

@@ -26,3 +26,7 @@ void release_ptr(void*, Pointer**);
 void release_ptrs(void***, size_t, Pointer**);
 
 void** retrieve_ptr(Pointer*, void*, void*);
+
+void update_ptrs(void***, void**, int, int, int, int);
+
+void** copy_ptrs(void***, int);

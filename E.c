@@ -103,7 +103,6 @@ int dedup_blocks(void*** pointers, int num_ptrs){
 	size_t n;
 	void* starts[num_ptrs];
 	void* ends[num_ptrs];
-	int count = 0;
 
 	for(i=0; i<num_ptrs; i++){
 		retrieve_block(*pointers[i], available_zones, &start, &end);		
@@ -112,18 +111,18 @@ int dedup_blocks(void*** pointers, int num_ptrs){
 		}
 
 		//Siano (B1, ..., Bk) i blocchi puntati dai puntatori in pointers... 
-		starts[count] = start;
-		ends[count] = end;
-		count++;
+		starts[i] = start;
+		ends[i] = end;
 	}
 
 	//...ed elencati secondo il loro ordine relativo in memoria
-	reorder_addresses(starts, ends, count, num_ptrs);
+	void** ptrs_copy = copy_ptrs(pointers, num_ptrs);
+	reorder_addresses(starts, ends, ptrs_copy, num_ptrs);
 
 	//3. Ripartisce (B1, ..., Bk) in (S1, ..., Sh) insiemi tali per cui ogni insieme contiene blocchi duplicati
 	int num_set = 0;	
 	int* in_set;
-	void**** sets = group_duplicates(starts, ends, count, &num_set, &in_set);
+	void**** sets = group_duplicates(starts, ends, ptrs_copy, num_ptrs, &num_set, &in_set);
 
 	//4. Per ogni insieme, sceglie un blocco Bi in St come rappresentante
 	int j;
@@ -141,11 +140,13 @@ int dedup_blocks(void*** pointers, int num_ptrs){
 			e = sets[i][1][j];
 
 			//Cambia tutti i puntatori che puntano a B in modo che puntino al rappresentante
-			pointer_array = block_info(&s, &s, &e, &n);
+			pointer_array = block_info(&ptrs_copy[i*in_set[i] + j], &s, &e, &n);
 			if(n != 0){
 				insert_corresp_ptrs(*pointer_array, s, n, start);
-			}			
-			
+			}
+
+			update_ptrs(pointers, ptrs_copy, i, j, in_set[i], num_ptrs);
+						
 			//Dealloca B.
 			release_block(s, &available_zones);	
 			release_ptrs(pointer_array, n, &handled_ptrs);
@@ -157,6 +158,7 @@ int dedup_blocks(void*** pointers, int num_ptrs){
 
 	free(sets);
 	free(in_set);
+	free(ptrs_copy);
 
 	return 0;
 }

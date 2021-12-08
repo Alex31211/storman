@@ -148,12 +148,12 @@ void to_snapshot(void* start, void* end, Zone** head){
 /*Usage:
 	- E: dedup_blocks
 */
-void reorder_addresses(void** starts, void** ends, int count, int num_ptrs){
+void reorder_addresses(void** starts, void** ends, void** pointers, int num_ptrs){
 	int i, flag;
 	void* temp;
 	do{
 		flag = 0;
-		for(i=0; i<count-1; i++){
+		for(i=0; i<num_ptrs-1; i++){
 			if(starts[i] > starts[i+1]){
 				temp = starts[i];
 				starts[i] = starts[i+1];
@@ -163,15 +163,14 @@ void reorder_addresses(void** starts, void** ends, int count, int num_ptrs){
 				ends[i] = ends[i+1];
 				ends[i+1] = temp;
 
+				temp = pointers[i];
+				pointers[i] = pointers[i+1];
+				pointers[i+1] = temp;
+
 				flag = 1;
 			}
 		}
 	}while(flag);
-
-	for(i=count+1; i<num_ptrs; i++){
-		starts[i] = NULL;
-		ends[i] = NULL;
-	}
 }
 
 //Esclude dal set blocchi già aggiunti
@@ -204,11 +203,21 @@ int add_in_set(void*** set, void* start, void* end, int idx, int dim){
 	return 1;
 }
 
+//Raggruppa i puntatori di blocchi duplicati
+/*Usage:
+	Internal
+*/
+void switch_ptrs(void** pointers, int base_idx, int switch_idx, int tot){
+	void* temp = pointers[base_idx+tot];
+	pointers[base_idx+tot] = pointers[switch_idx];
+	pointers[switch_idx] = temp;
+}
+
 //Raggruppa in set i blocchi duplicati
 /*Usage:
 	- E: dedup_blocks
 */
-void**** group_duplicates(void** starts, void** ends, int count, int* num_set, int** in_set){
+void**** group_duplicates(void** starts, void** ends, void** pointers, int count, int* num_set, int** in_set){
 	int i,j;
 	int total_sets = 0;   //Contatore degli insiemi costruiti
 	int num_block[count]; //Indice dei blocchi per tenere traccia dei duplicati
@@ -246,7 +255,8 @@ void**** group_duplicates(void** starts, void** ends, int count, int* num_set, i
 			//Per ogni duplicato trovato...
 			if(are_identical_blocks(starts[i], ends[i], starts[j], ends[j])){ 
 				//Aggiunge il blocco all'insieme
-				add_in_set(sets[total_sets], starts[j], ends[j], tot_in_set[total_sets], count);			
+				add_in_set(sets[total_sets], starts[j], ends[j], tot_in_set[total_sets], count);
+				switch_ptrs(pointers, i, j, tot_in_set[total_sets]);	//Affianca i puntatori relativi a blocchi identici
 				num_block[j] = -1; 				//Etichetta il blocco come duplicato
 				tot_in_set[total_sets] += 1;	//Incrementa il numero di blocchi nell'insieme
 			}

@@ -16,6 +16,6 @@ void to_alias(void*, void*, Zone**);
 
 void to_snapshot(void*, void*, Zone**);
 
-void reorder_addresses(void**, void**, int, int);
+void reorder_addresses(void**, void**, void**, int);
 
-void**** group_duplicates(void**, void**, int, int*, int**);
+void**** group_duplicates(void**, void**, void**, int, int*, int**);
