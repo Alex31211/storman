@@ -96,7 +96,9 @@ int block_realloc(void** ptr_addr, size_t newsize){
 		}
 
 		//Altrimenti, alloca un nuovo blocco B', dealloca B e ritorna 0.			
-		copy_block(ptr_addr, &start, &end, size, newsize);
+		void* newstart = copy_block(ptr_addr, &start, size, newsize, NULL);
+		copy_ptrs(ptr_addr, start, end, newstart);
+
 		release_block(*ptr_addr, &available_zones);
 		return 0;
 	}

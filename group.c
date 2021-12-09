@@ -28,10 +28,10 @@ void** retrieve_snapshot(Pointer* head, void* start, void* end, int dim){
 	- E: pointer_assign
 	- assign MACRO
 */
-int is_in_snapshot(void* addr, void** ptrs, int len){
+int is_in_snapshot(void** addr, void** ptrs, int len){
 
 	for(int i=0; i<len; i++){
-		if(ptrs[i] == addr){
+		if(ptrs[i] == *addr){
 			return 1;
 		}
 	}
@@ -46,8 +46,9 @@ int is_in_snapshot(void* addr, void** ptrs, int len){
 	- assign MACRO
 */
 int is_a_snapshot(void* start, void* end, Zone** head){
-	int flag;
+
 	int num_ptrs = has_multiple_ptrs(start, end, handled_ptrs);
+	int flag = 0;
 	if(num_ptrs == 1){
 		flag = 1; //il blocco ha un solo puntatore -> storman si comporta come se fosse un alias
 	}
@@ -61,7 +62,6 @@ int is_a_snapshot(void* start, void* end, Zone** head){
 		e = curr->ending_addr;
 
 		for(i=0; i<MAX_BLOCKS; i++){
-
 			if(s[i] == NULL){
 				break;
 			}
@@ -71,14 +71,12 @@ int is_a_snapshot(void* start, void* end, Zone** head){
 					(curr->type)[i] = ALIAS;
 					return 0;
 				}
-
-				return 1;
+				return !(curr->type)[i];
 			}
 		}
 		curr = curr->next;
 	}
 
-	//il gruppo è uno snapshot: ha più puntatori e non nella lista degli alias
 	return -1;
 }
 

@@ -19,6 +19,8 @@ void insert_new_pointer(void**, Pointer**, int);
 
 void insert_corresp_ptrs(void**, void*, int, void*);
 
+void copy_ptrs(void**, void*, void*, void*);
+
 void** get_corresp_ptr(void*, void*, void*, void**);
 
 void release_ptr(void*, Pointer**);
@@ -29,4 +31,4 @@ void** retrieve_ptr(Pointer*, void*, void*);
 
 void update_ptrs(void***, void**, int, int, int, int);
 
-void** copy_ptrs(void***, int);
+void** copy_ptrs_array(void***, int);

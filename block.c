@@ -30,6 +30,8 @@ int insert_new_block(Zone** zone, void* start, void* end){
 	- B: block_info
 		 block_realloc
 	- E: pointer_assign
+		 toggle_snapshot
+		 dedup_blocks
 */
 int retrieve_block(void* ptr, Zone* head, void** start, void** end){
 	int i;
@@ -44,6 +46,7 @@ int retrieve_block(void* ptr, Zone* head, void** start, void** end){
 		for(i=0; i<MAX_BLOCKS; i++){
 
 			if(s[i] == NULL){
+				
 				break;
 			}
 
@@ -82,27 +85,37 @@ void clear_block(void** start, size_t size){
 */
 void release_block(void* ptr, Zone** head){
 
-	int idx;
-	void* s;
-	void* e;
-	if((idx = retrieve_block(ptr, *head, &s, &e)) == -1){
-		return;
+	void** s;
+	void** e;
+	
+	int flag, i;
+	Zone* curr = *head;
+	while(curr != NULL){
+		s = curr->starting_addr;
+		e = curr->ending_addr;
+
+		for(i=0; i<MAX_BLOCKS; i++){
+			if(s[i] == NULL){
+				flag = 0;
+				break;
+			}
+
+			if(s[i]<=ptr && ptr<e[i]){
+				flag = 1;
+				break;
+			}
+		}
+
+		if(flag){
+			break;
+		}
+		curr = curr->next;
 	}
 
 	size_t size = (size_t)(e - s);
-
-	Zone* curr = *head;
-	int temp = idx;
-	while(temp != 0){
-		curr = curr->next;
-		temp--;
-	}
-
     curr->available += size;
     clear_block(curr->starting_addr, size);
-    order_metadata(&curr, idx);
-
-    
+    order_metadata(&curr, i);
 }
 
 //Controlla quanti ptr gestiti puntano a block
@@ -234,24 +247,20 @@ void copy_block_content(void* new, void* old, size_t size){
 	- B: block_realloc
 	- E: pointer_assign
 */
-void* copy_block(void** ptr_addr, void** start, void** end, size_t size, size_t newsize){
+void* copy_block(void** ptr_addr, void** start, size_t size, size_t newsize, void** newptr){
 	//Allineamento
 	size_t alignment = retrieve_alignment(*start);
-	block_alloc(ptr_addr, alignment, newsize);
-
-	//Contenuto
 	void* newstart;
 	void* newend;
-	retrieve_block(*ptr_addr, available_zones, &newstart, &newend);
+	if(newptr == NULL){
+		block_alloc(ptr_addr, alignment, newsize);
+		retrieve_block(*ptr_addr, available_zones, &newstart, &newend);
+	}else{
+		block_alloc(newptr, alignment, newsize);
+		retrieve_block(*newptr, available_zones, &newstart, &newend);
+	}
+	
 	copy_block_content(newstart, *start, size);
-				
-	//Puntatori
-	size_t num;
-	void*** pointer_array = block_info(ptr_addr, *start, *end, &num);
-	if(num != 0){
-		insert_corresp_ptrs(*pointer_array, *start, num, newstart);
-	}			
-	free(pointer_array);
 
 	return newstart;
 }

@@ -20,6 +20,6 @@ void expand_block(void*, Zone**, size_t);
 
 //void copy_block_content(void*, void*, size_t); --> Internal
 
-void* copy_block(void**, void**, void**, size_t, size_t);
+void* copy_block(void**, void**, size_t, size_t, void**);
 
 int are_identical_blocks(void*, void*, void*, void*);

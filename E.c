@@ -15,6 +15,13 @@ int pointer_assign(void** ptr_addr, void* val, void** mptr_addr){
 	void* start;
 	void* end;
 
+	//0. Gestisci il comportamento verso il gruppo
+	retrieve_block(val, available_zones, &start, &end);
+	int num_ptr = has_multiple_ptrs(start, end, handled_ptrs);
+	if(num_ptr == 1){
+		to_alias(start, end, &available_zones);
+	}
+
 	//1. Se l’indirizzo in ptr_addr non fa parte di uno dei blocchi gestiti da storman allora chiama pointer_assign_internal
 	if((retrieve_block(*ptr_addr, available_zones, &start, &end) == -1)){
 		return pointer_assign_internal(ptr_addr, val);
@@ -25,18 +32,18 @@ int pointer_assign(void** ptr_addr, void* val, void** mptr_addr){
 		return pointer_assign_internal(ptr_addr, val);
 	}
 
-	int num_ptr = has_multiple_ptrs(start, end, handled_ptrs);
+	num_ptr = has_multiple_ptrs(start, end, handled_ptrs);
 	void** snapshot = retrieve_snapshot(handled_ptrs, start, end, num_ptr);
 
 	//3. Se mptr_addr non è l’indirizzo di un puntatore appartenente allo snapshot di B ritorna 2.	
-	if((mptr_addr == NULL) || (!is_in_snapshot(*mptr_addr, snapshot, num_ptr))){
+	if((mptr_addr == NULL) || (!is_in_snapshot(mptr_addr, snapshot, num_ptr))){
 		return 2;
 	}
 
 	//4. Mantiene la proprietà degli snapshot
 	//alloca un nuovo blocco B' delle stesse dimensioni di B e con lo stesso allineamento e copia il contenuto di B in B'.
 	size_t size = (size_t)(end-start);
-	void* newstart = copy_block(ptr_addr, &start, &end, size, size);
+	void* newstart = copy_block(ptr_addr, &start, size, size, mptr_addr);
 	void* newend = (void*)((size_t)newstart + size);
 
 	//fa puntare p a B'
@@ -116,7 +123,7 @@ int dedup_blocks(void*** pointers, int num_ptrs){
 	}
 
 	//...ed elencati secondo il loro ordine relativo in memoria
-	void** ptrs_copy = copy_ptrs(pointers, num_ptrs);
+	void** ptrs_copy = copy_ptrs_array(pointers, num_ptrs);
 	reorder_addresses(starts, ends, ptrs_copy, num_ptrs);
 
 	//3. Ripartisce (B1, ..., Bk) in (S1, ..., Sh) insiemi tali per cui ogni insieme contiene blocchi duplicati
@@ -148,7 +155,7 @@ int dedup_blocks(void*** pointers, int num_ptrs){
 			update_ptrs(pointers, ptrs_copy, i, j, in_set[i], num_ptrs);
 						
 			//Dealloca B.
-			release_block(s, &available_zones);	
+			release_block(ptrs_copy[i*in_set[i] + j], &available_zones);	
 			release_ptrs(pointer_array, n, &handled_ptrs);
 			free(pointer_array);		
 		}

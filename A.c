@@ -85,7 +85,7 @@ Rilascia il puntatore in ptr_addr ed eventualmente il blocco a cui questo punta.
 	1: esecuzione corretta, ma solo il puntatore in ptr_addr è stato rilasciato.
 	2: errore, l’indirizzo in ptr_addr non è quello di un puntatore gestito da storman
 */
-int block_release (void** ptr_addr){
+int block_release(void** ptr_addr){
 
 	//1. Se l’indirizzo in ptr_addr non è quello di un puntatore già gestito da storman allora ritorna con errore
 	void* start;

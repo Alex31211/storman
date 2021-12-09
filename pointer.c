@@ -1,4 +1,5 @@
 #include "pointer.h"
+#include "storman.h"
 
 //Controlla se ptr è gestito da storman
 /*Usage:
@@ -65,7 +66,7 @@ void insert_corresp_ptrs(void** array, void* base, int dim, void* newbase){
 
 	void* temp1 = base;
 	void* temp2 = newbase;
-	void** addr = NULL;
+	void** addr = (void**)malloc(sizeof(void*));
 
 	int i=0;
 	do{
@@ -77,6 +78,17 @@ void insert_corresp_ptrs(void** array, void* base, int dim, void* newbase){
 		temp1 = array[i];
 		i++;
 	}while(i < dim);
+}
+
+void copy_ptrs(void** ptr_addr, void* old_start, void* old_end, void* newstart){
+
+	//Puntatori
+	size_t num;
+	void*** pointer_array = block_info(ptr_addr, old_start, old_end, &num);
+	if(num != 0){
+		insert_corresp_ptrs(*pointer_array, old_start, num, newstart);
+	}			
+	free(pointer_array);
 }
 
 //Trova il puntatore corrispondente a src che punta ad un blocco da copiare
@@ -96,7 +108,7 @@ void** get_corresp_ptr(void* src_ptr, void* src_start, void* src_end, void** des
 		i++;
 	}
 
-	return (dest_start + i);
+	return (*dest_start + i);
 }
 
 
@@ -161,7 +173,7 @@ void update_ptrs(void*** pointers, void** copy, int i, int j, int in_set, int to
 	int z;
 	for(z=0; z<tot; z++){
 		if(*pointers[z] == copy[i*in_set + j]){
-			*pointers[z] = copy[i*in_set];				
+			*pointers[z] = copy[i*in_set];		
 		}
 	}
 }
@@ -170,7 +182,7 @@ void update_ptrs(void*** pointers, void** copy, int i, int j, int in_set, int to
 /*Usage:
 	- E: dedup_blocks
 */
-void** copy_ptrs(void*** pointers, int tot){
+void** copy_ptrs_array(void*** pointers, int tot){
 	void** copy = (void**)malloc(tot*sizeof(void **));
 	for(int i=0; i<tot; i++){
 		copy[i] = *pointers[i];

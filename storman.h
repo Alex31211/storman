@@ -59,18 +59,17 @@ int pointer_assign(void** ptr_addr, void* val, void** mptr_addr);
 				}else{ \
 					/*Mantiene la proprietà degli snapshot.*/\
 					size_t size = (size_t)(end-start);\
-					void* newstart = copy_block((void*)&__lv, &start, &end, size, size);\
+					void* temp = (void*)&__lv;\
+					void* newstart = copy_block(&temp, &start, size, size, mptr_addr);\
 					void* newend = (void*)((size_t)newstart + size); \
 					/*Trova il corrispondente di &__lv in B'*/\
-					void** newptr = get_corresp_ptr(&__lv, start, end, newstart);\
+					void** newptr = get_corresp_ptr((void*)&__lv, start, end, &newstart);\
 					\
 					/*Quindi __rv sarà assegnato non a __lv ma al corrispondente indirizzo in B'.*/\
-					(**(char**)newptr) = __rv;\
+					*((int*)newptr) = __rv;\
 					to_alias(newstart, newend, &available_zones);\
+					__ret = 0; \
 				} \
 			}\
 		}\
 	}
-
-	
-
