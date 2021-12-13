@@ -84,8 +84,8 @@ int block_realloc(void** ptr_addr, size_t newsize){
 		return 1;
 	}
 
-	//2. |B| < newsize
 	size_t size = (size_t)(end - start);
+	//2. |B| < newsize	
 	if(size < newsize){ 		
 		
 		size_t needed_dim = newsize-size;

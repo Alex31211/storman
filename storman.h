@@ -27,14 +27,13 @@ int pointer_info(void** ptr_addr, int* type);
 			__lv = __rv; \
 		} \
 	}
-				
-		
+						
 int block_realloc(void** ptr_addr, size_t newsize);
 
 //Modulo E
-int dedup_blocks(void*** pointers, int num_ptrs);
-int toggle_snapshot(void** ptr_addr);
 int pointer_assign(void** ptr_addr, void* val, void** mptr_addr);
+int toggle_snapshot(void** ptr_addr);
+int dedup_blocks(void*** pointers, int num_ptrs);
 #define assign(__lv , __rv , __ret , mptr_addr) \
 	/*1. Se __lv è uno dei puntatori gestiti da storman ritorna 2*/ \
 	if(is_handled(&__lv, handled_ptrs)){ \

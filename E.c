@@ -44,6 +44,7 @@ int pointer_assign(void** ptr_addr, void* val, void** mptr_addr){
 	//alloca un nuovo blocco B' delle stesse dimensioni di B e con lo stesso allineamento e copia il contenuto di B in B'.
 	size_t size = (size_t)(end-start);
 	void* newstart = copy_block(ptr_addr, &start, size, size, mptr_addr);
+
 	void* newend = (void*)((size_t)newstart + size);
 
 	//fa puntare p a B'
@@ -81,6 +82,7 @@ int toggle_snapshot(void** ptr_addr){
 		//3. Se il puntatore con indirizzo in ptr_addr fa parte di un alias group allora trasforma l’alias group in snapshot e ritorna 0.
 		to_snapshot(beginning, end, &available_zones);
 	}
+	
 	return 0;
 }
 

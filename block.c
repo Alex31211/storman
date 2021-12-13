@@ -46,7 +46,6 @@ int retrieve_block(void* ptr, Zone* head, void** start, void** end){
 		for(i=0; i<MAX_BLOCKS; i++){
 
 			if(s[i] == NULL){
-				
 				break;
 			}
 
@@ -112,9 +111,10 @@ void release_block(void* ptr, Zone** head){
 		curr = curr->next;
 	}
 
-	size_t size = (size_t)(e - s);
+	size_t size = (size_t)(e[i] - s[i]);
     curr->available += size;
     clear_block(curr->starting_addr, size);
+    
     order_metadata(&curr, i);
 }
 
@@ -186,7 +186,7 @@ void reduce_block(void** start, void** end, void** newend, Zone** head){
 */
 int avb_space(void* ptr, Zone* head, size_t needed_dim){
 
-	int i;
+	int i, j;
 	void** s;
 	void** e;
 
@@ -200,9 +200,13 @@ int avb_space(void* ptr, Zone* head, size_t needed_dim){
 			}
 
 			if(s[i]<=ptr && ptr<e[i]){
-				if((s[i+1] == NULL) && (curr->available >= needed_dim)){
-					return 1;
-				}
+				if(curr->available >= needed_dim){
+					for(j=1; j<= (int)needed_dim; j++){
+						if(e[i]+j == NULL){
+							return 1;
+						}
+					}
+				}				
 			}
 		}
 		curr = curr->next;
@@ -225,6 +229,7 @@ void expand_block(void* end, Zone** head, size_t needed_dim){
 		for(i=0; i<MAX_BLOCKS; i++){
 			if(e[i] == end){
 				e[i] = end + needed_dim;
+				return;
 			}
 		}
 		curr = curr->next;
@@ -250,6 +255,7 @@ void copy_block_content(void* new, void* old, size_t size){
 void* copy_block(void** ptr_addr, void** start, size_t size, size_t newsize, void** newptr){
 	//Allineamento
 	size_t alignment = retrieve_alignment(*start);
+	
 	void* newstart;
 	void* newend;
 	if(newptr == NULL){

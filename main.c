@@ -1,7 +1,7 @@
 //Modulo da testare
-#define E
+#define A
 //Funzione da testare
-#define TOGGLE_SNAPSHOT
+#define BLOCK_RELEASE
 #include "storman.h"
 
 //Init lists
